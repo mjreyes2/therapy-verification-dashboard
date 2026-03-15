@@ -22,7 +22,7 @@
 
         function App() {
           // --- AUTHENTICATION STATE ---
-          const CORRECT_PIN = "8069"; // CHANGE THIS NUMBER RIGHT HERE
+          const CORRECT_PIN = "1234"; // CHANGE THIS NUMBER RIGHT HERE
           
           const [isAuthenticated, setIsAuthenticated] = useState(() => {
             return sessionStorage.getItem('tbta_auth') === 'true';
@@ -36,7 +36,6 @@
           const [isSaving, setIsSaving] = useState(false);
           const [searchTerm, setSearchTerm] = useState("");
 
-          // Fetch live data from Google Sheets
           const loadData = async () => {
             setIsLoading(true);
             try {
@@ -49,11 +48,8 @@
             setIsLoading(false);
           };
 
-          // Load data when user successfully logs in
           useEffect(() => {
-            if (isAuthenticated) {
-              loadData();
-            }
+            if (isAuthenticated) loadData();
           }, [isAuthenticated]);
 
           // --- MONTHLY TRACKING STATE ---
@@ -64,7 +60,6 @@
           const [copiedEmailId, setCopiedEmailId] = useState(null);
           const [copiedMessageId, setCopiedMessageId] = useState(null);
 
-          // Load tracking progress from browser memory
           useEffect(() => {
             const savedProgress = localStorage.getItem('marvinVerificationData');
             if (savedProgress) {
@@ -78,33 +73,41 @@
 
           useEffect(() => {
             localStorage.setItem('marvinVerificationData', JSON.stringify({
-              month: currentMonthYear,
-              checkedOffIds,
-              isMonthComplete
+              month: currentMonthYear, checkedOffIds, isMonthComplete
             }));
           }, [checkedOffIds, isMonthComplete, currentMonthYear]);
 
-          // --- ADD & DELETE GROUPS (BACKEND SYNC) ---
+          // --- ADD, EDIT, DELETE GROUPS ---
           const [showAddForm, setShowAddForm] = useState(false);
-          const [newGroup, setNewGroup] = useState({
-            groupName: "", therapist: "", county: "Pinellas", modality: "In-Person", type: "Open", email: "", cost: "", schedule: ""
+          const [showEditForm, setShowEditForm] = useState(false);
+          const [currentGroup, setCurrentGroup] = useState({
+            id: null, groupName: "", therapist: "", county: "Pinellas", modality: "In-Person", type: "Open", email: "", cost: "", schedule: ""
           });
 
-          const handleAddSubmit = async (e) => {
+          // Open forms
+          const openAddForm = () => {
+            setCurrentGroup({ id: null, groupName: "", therapist: "", county: "Pinellas", modality: "In-Person", type: "Open", email: "", cost: "", schedule: "" });
+            setShowAddForm(true);
+          };
+
+          const openEditForm = (group) => {
+            setCurrentGroup(group);
+            setShowEditForm(true);
+          };
+
+          const handleSaveSubmit = async (e, actionType) => {
             e.preventDefault();
             setIsSaving(true);
             try {
-              // Send data to Google Sheets
               await fetch(SCRIPT_URL, {
                 method: "POST",
-                body: JSON.stringify({ action: "add", data: newGroup })
+                body: JSON.stringify({ action: actionType, data: currentGroup })
               });
-              // Reload the data directly from the sheet so we have the absolute newest version
               await loadData();
               setShowAddForm(false);
-              setNewGroup({ groupName: "", therapist: "", county: "Pinellas", modality: "In-Person", type: "Open", email: "", cost: "", schedule: "" });
+              setShowEditForm(false);
             } catch (error) {
-              alert("Error saving group to database. Please try again.");
+              alert(`Error saving group. Please try again.`);
             }
             setIsSaving(false);
           };
@@ -113,7 +116,6 @@
             if (window.confirm(`Are you sure you want to completely delete "${groupName}" from the database?`)) {
               setIsSaving(true);
               try {
-                // Tell Google Sheets to delete the row
                 await fetch(SCRIPT_URL, {
                   method: "POST",
                   body: JSON.stringify({ action: "delete", id: id })
@@ -134,37 +136,18 @@
             textArea.select();
             try {
               document.execCommand('copy');
-              if (type === 'email') {
-                setCopiedEmailId(id);
-                setTimeout(() => setCopiedEmailId(null), 2000);
-              } else {
-                setCopiedMessageId(id);
-                setTimeout(() => setCopiedMessageId(null), 2000);
-              }
-            } catch (err) {
-              console.error('Failed to copy', err);
-            }
+              if (type === 'email') { setCopiedEmailId(id); setTimeout(() => setCopiedEmailId(null), 2000); } 
+              else { setCopiedMessageId(id); setTimeout(() => setCopiedMessageId(null), 2000); }
+            } catch (err) {}
             document.body.removeChild(textArea);
           };
 
           const handleLogin = (e) => {
             e.preventDefault();
-            if (pinInput === CORRECT_PIN) {
-              setIsAuthenticated(true);
-              sessionStorage.setItem('tbta_auth', 'true');
-              setPinError(false);
-            } else {
-              setPinError(true);
-              setPinInput("");
-            }
+            if (pinInput === CORRECT_PIN) { setIsAuthenticated(true); sessionStorage.setItem('tbta_auth', 'true'); setPinError(false); } 
+            else { setPinError(true); setPinInput(""); }
           };
-
-          const handleLogout = () => {
-            setIsAuthenticated(false);
-            sessionStorage.removeItem('tbta_auth');
-            setPinInput("");
-          };
-
+          const handleLogout = () => { setIsAuthenticated(false); sessionStorage.removeItem('tbta_auth'); setPinInput(""); };
           const toggleExpand = (id) => setExpandedGroupId(expandedGroupId === id ? null : id);
           const markAsEmailed = (id) => { if (!checkedOffIds.includes(id)) setCheckedOffIds([...checkedOffIds, id]); setExpandedGroupId(null); };
           const undoEmailed = (id) => { setCheckedOffIds(checkedOffIds.filter(checkedId => checkedId !== id)); setIsMonthComplete(false); };
@@ -172,9 +155,9 @@
 
           const filteredData = useMemo(() => {
             return data.filter(group => {
-              return group.groupName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                     group.therapist.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                     group.county.toLowerCase().includes(searchTerm.toLowerCase());
+              return group.groupName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                     group.therapist?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                     group.county?.toLowerCase().includes(searchTerm.toLowerCase());
             });
           }, [data, searchTerm]);
 
@@ -185,7 +168,6 @@
 
           const progressPercentage = data.length > 0 ? Math.round((checkedOffIds.length / data.length) * 100) : 0;
           const allChecked = checkedOffIds.length === data.length && data.length > 0;
-          const today = new Date().getDate();
           const showBlinkingAlert = !isMonthComplete;
 
           // --- LOGIN SCREEN UI ---
@@ -213,7 +195,7 @@
           // --- MAIN DASHBOARD UI ---
           return (
             <div className="relative min-h-screen">
-              {/* Full-screen Saving Overlay */}
+              {/* Saving Overlay */}
               {isSaving && (
                 <div className="fixed inset-0 bg-white bg-opacity-80 z-50 flex flex-col items-center justify-center">
                   <i className="fas fa-circle-notch fa-spin text-5xl text-indigo-600 mb-4"></i>
@@ -242,15 +224,12 @@
               </header>
 
               <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-                
-                {/* BLINKING ALERT */}
                 {showBlinkingAlert && (
                   <div className="bg-red-600 text-white p-5 animate-pulse flex flex-col sm:flex-row justify-between items-center text-lg sm:text-xl font-extrabold rounded-lg mb-8 border-4 border-red-800 shadow-2xl tracking-wide text-center sm:text-left gap-4">
                     <div className="flex items-center gap-3"><i className="fas fa-exclamation-triangle text-3xl"></i><span>URGENT: SEND OUT MONTHLY VERIFICATION EMAILS FOR {currentMonthYear.toUpperCase()}!</span></div>
                   </div>
                 )}
 
-                {/* PROGRESS TRACKER */}
                 <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-8">
                   <div className="flex justify-between items-end mb-2">
                     <div>
@@ -262,11 +241,6 @@
                   <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
                     <div className="bg-indigo-600 h-4 rounded-full transition-all duration-500 ease-out" style={{ width: `${progressPercentage}%` }}></div>
                   </div>
-                  {allChecked && !isMonthComplete && (
-                    <div className="mt-6 text-center animate-bounce">
-                      <button onClick={handleCompleteMonth} className="w-full sm:w-auto px-8 py-4 bg-green-500 hover:bg-green-600 text-white text-lg font-bold rounded-lg shadow-lg border border-green-700 transition-colors cursor-pointer">🎉 MARK MONTH AS COMPLETE 🎉</button>
-                    </div>
-                  )}
                 </div>
 
                 {/* SEARCH & ADD BUTTON */}
@@ -275,45 +249,44 @@
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><i className="fas fa-search text-gray-400"></i></div>
                     <input type="text" className="block w-full pl-11 pr-3 py-4 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg" placeholder="Search groups, therapists, or locations..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                   </div>
-                  <button onClick={() => setShowAddForm(true)} className="px-6 py-4 bg-indigo-800 hover:bg-indigo-900 text-white font-bold rounded-lg shadow-sm flex items-center justify-center gap-2 transition-colors cursor-pointer whitespace-nowrap">
+                  <button onClick={openAddForm} className="px-6 py-4 bg-indigo-800 hover:bg-indigo-900 text-white font-bold rounded-lg shadow-sm flex items-center justify-center gap-2 transition-colors cursor-pointer whitespace-nowrap">
                     <i className="fas fa-plus"></i> Add Group
                   </button>
                 </div>
 
-                {/* ADD GROUP FORM */}
-                {showAddForm && (
+                {/* REUSABLE FORM MODAL (For both Add and Edit) */}
+                {(showAddForm || showEditForm) && (
                   <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
                       <div className="flex justify-between items-center mb-6 border-b pb-4">
-                        <h2 className="text-2xl font-bold text-gray-800">Add New Directory Group</h2>
-                        <button onClick={() => setShowAddForm(false)} className="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
+                        <h2 className="text-2xl font-bold text-gray-800">{showEditForm ? 'Edit Directory Group' : 'Add New Directory Group'}</h2>
+                        <button onClick={() => {setShowAddForm(false); setShowEditForm(false);}} className="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
                       </div>
-                      <form onSubmit={handleAddSubmit} className="space-y-4">
+                      <form onSubmit={(e) => handleSaveSubmit(e, showEditForm ? 'edit' : 'add')} className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Group Name *</label><input required type="text" value={newGroup.groupName} onChange={e => setNewGroup({...newGroup, groupName: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g. Adult DBT Skills" /></div>
-                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Therapist/Provider *</label><input required type="text" value={newGroup.therapist} onChange={e => setNewGroup({...newGroup, therapist: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g. John Doe, LMHC" /></div>
-                          <div><label className="block text-sm font-medium text-gray-700 mb-1">County/Location *</label><input required type="text" value={newGroup.county} onChange={e => setNewGroup({...newGroup, county: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" /></div>
-                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Provider Email *</label><input required type="email" value={newGroup.email} onChange={e => setNewGroup({...newGroup, email: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" /></div>
-                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Modality</label><select value={newGroup.modality} onChange={e => setNewGroup({...newGroup, modality: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500"><option>In-Person</option><option>Virtual</option><option>Hybrid</option></select></div>
-                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Group Type</label><select value={newGroup.type} onChange={e => setNewGroup({...newGroup, type: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500"><option>Open</option><option>Closed</option><option>Rolling</option></select></div>
-                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Cost / Insurance</label><input type="text" value={newGroup.cost} onChange={e => setNewGroup({...newGroup, cost: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g. $40/session or BCBS" /></div>
-                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Schedule</label><input type="text" value={newGroup.schedule} onChange={e => setNewGroup({...newGroup, schedule: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g. Mondays 6:00 PM" /></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Group Name *</label><input required type="text" value={currentGroup.groupName} onChange={e => setCurrentGroup({...currentGroup, groupName: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" /></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Therapist/Provider *</label><input required type="text" value={currentGroup.therapist} onChange={e => setCurrentGroup({...currentGroup, therapist: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" /></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">County/Location *</label><input required type="text" value={currentGroup.county} onChange={e => setCurrentGroup({...currentGroup, county: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" /></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Provider Email *</label><input required type="text" value={currentGroup.email} onChange={e => setCurrentGroup({...currentGroup, email: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" /></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Modality</label><select value={currentGroup.modality} onChange={e => setCurrentGroup({...currentGroup, modality: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500"><option>In-Person</option><option>Virtual</option><option>Hybrid</option></select></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Group Type</label><select value={currentGroup.type} onChange={e => setCurrentGroup({...currentGroup, type: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500"><option>Open</option><option>Closed</option><option>Rolling</option></select></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Cost / Insurance</label><input type="text" value={currentGroup.cost} onChange={e => setCurrentGroup({...currentGroup, cost: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" /></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Schedule</label><input type="text" value={currentGroup.schedule} onChange={e => setCurrentGroup({...currentGroup, schedule: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" /></div>
                         </div>
                         <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
-                          <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded font-medium">Cancel</button>
-                          <button type="submit" className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-bold">Save Group to Database</button>
+                          <button type="button" onClick={() => {setShowAddForm(false); setShowEditForm(false);}} className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded font-medium">Cancel</button>
+                          <button type="submit" className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-bold">{showEditForm ? 'Save Changes' : 'Save Group to Database'}</button>
                         </div>
                       </form>
                     </div>
                   </div>
                 )}
 
-                {/* LOADING STATE */}
+                {/* LOADING & LIST STATE */}
                 {isLoading ? (
                   <div className="bg-white p-16 rounded-lg border border-gray-200 text-center shadow-sm">
                     <i className="fas fa-spinner fa-spin text-5xl text-indigo-500 mb-4"></i>
                     <h3 className="text-xl font-bold text-gray-800">Fetching live database...</h3>
-                    <p className="text-gray-500 mt-2">Reading from Google Sheets</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -326,11 +299,14 @@
                         return (
                           <div key={group.id} className={`bg-white rounded-lg border-2 shadow-sm transition-all duration-200 relative ${isCheckedOff ? 'border-green-300 opacity-60 bg-green-50' : 'border-gray-200 hover:border-indigo-300'}`}>
                             
-                            {/* DELETE BUTTON */}
-                            <button onClick={() => handleDelete(group.id, group.groupName)} className="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors z-10 p-2" title="Delete from Database"><i className="fas fa-trash-alt text-lg"></i></button>
+                            {/* EDIT AND DELETE BUTTONS */}
+                            <div className="absolute top-4 right-4 flex gap-3 z-10">
+                              <button onClick={() => openEditForm(group)} className="text-gray-400 hover:text-indigo-600 transition-colors p-1" title="Edit Group"><i className="fas fa-edit text-lg"></i></button>
+                              <button onClick={() => handleDelete(group.id, group.groupName)} className="text-gray-400 hover:text-red-500 transition-colors p-1" title="Delete from Database"><i className="fas fa-trash-alt text-lg"></i></button>
+                            </div>
 
                             {/* Card Header */}
-                            <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pr-12">
+                            <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pr-20">
                               <div className="flex-1 w-full">
                                 <div className="flex items-center gap-2">
                                   {isCheckedOff && <i className="fas fa-check-circle text-green-500 text-xl"></i>}
@@ -345,7 +321,6 @@
                                 <p className="text-sm text-gray-500 mt-2"><i className="far fa-clock mr-1"></i> {group.schedule}</p>
                               </div>
 
-                              {/* Action Buttons */}
                               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-4 sm:mt-0">
                                 {isCheckedOff ? (
                                   <button onClick={() => undoEmailed(group.id)} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 text-sm font-medium w-full sm:w-auto cursor-pointer">Undo</button>
@@ -358,9 +333,8 @@
                             {/* Expandable Panel */}
                             {isExpanded && !isCheckedOff && (
                               <div className="border-t border-gray-200 bg-gray-50 p-5 rounded-b-lg">
-                                <h4 className="font-bold text-gray-800 mb-3 text-lg">Email Draft for {group.therapist ? group.therapist.split(',')[0] : 'Provider'}</h4>
+                                <h4 className="font-bold text-gray-800 mb-3 text-lg">Email Draft</h4>
                                 <div className="mb-4">
-                                  <label className="block text-sm font-semibold text-gray-600 mb-1">To: (Therapist Email)</label>
                                   <div className="flex">
                                     <input type="text" readOnly value={group.email} className="flex-1 p-3 bg-white border border-gray-300 rounded-l-md text-gray-800 font-medium"/>
                                     <button onClick={() => copyToClipboard(group.email, 'email', group.id)} className={`px-4 py-3 flex items-center justify-center font-bold rounded-r-md transition-colors cursor-pointer ${copiedEmailId === group.id ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}>
@@ -369,7 +343,6 @@
                                   </div>
                                 </div>
                                 <div className="mb-6">
-                                  <label className="block text-sm font-semibold text-gray-600 mb-1">Message:</label>
                                   <div className="relative">
                                     <textarea readOnly value={message} rows={8} className="w-full p-4 bg-white border border-gray-300 rounded-md text-gray-800 leading-relaxed font-medium resize-none"></textarea>
                                     <div className="absolute bottom-4 right-4">
@@ -380,7 +353,6 @@
                                   </div>
                                 </div>
                                 <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                                  <p className="text-sm text-gray-500 italic">Once you paste this and send it, check this off.</p>
                                   <button onClick={() => markAsEmailed(group.id)} className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-md shadow-md flex items-center gap-2 text-lg transition-transform active:scale-95 cursor-pointer">
                                     <i className="fas fa-check-circle text-xl"></i> Mark as Emailed
                                   </button>
@@ -394,7 +366,6 @@
                       <div className="bg-white p-12 rounded-lg border border-gray-200 text-center">
                         <i className="fas fa-folder-open text-4xl text-gray-300 mb-4"></i>
                         <h3 className="text-xl font-bold text-gray-700">Database is Empty</h3>
-                        <p className="text-gray-500 text-lg mt-2">Use the "Add Group" button above to add a new therapist, or open your Google Sheet to type them in manually.</p>
                       </div>
                     )}
                   </div>
