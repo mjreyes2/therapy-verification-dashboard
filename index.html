@@ -17,91 +17,58 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // --- ACTUAL CLINICAL RESEARCH DATA ---
-        const directoryData = [
-          // PINELLAS COUNTY
-          { id: 1, groupName: "DBT Group for Teens", therapist: "Alexis Hiegel, LMHC", county: "Pinellas", modality: "Hybrid", type: "Rolling", email: "[Update Email Here]", cost: "$35/session (Cash/Superbill)", schedule: "10-week program (Rolling)" },
-          { id: 2, groupName: "Mindful Teens Summer DBT Support", therapist: "Dr. Mary Perleoni, PhD, LMHC", county: "Pinellas", modality: "In-Person", type: "Rolling", email: "[Update Email Here]", cost: "Custom Pricing/Superbills", schedule: "Summer sessions (Rolling)" },
-          { id: 3, groupName: "Breaking Chronic and Unhealthy Patterns (Adults)", therapist: "Holly Gardner, LMHC", county: "Pinellas", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "$40/session (Cash)", schedule: "Wednesdays, 6:00 PM" },
-          { id: 4, groupName: "Breaking Chronic Patterns (Teens)", therapist: "Holly Gardner, LMHC", county: "Pinellas", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "$40/session (Cash)", schedule: "Thursdays, 6:00 PM" },
-          { id: 5, groupName: "Rooted and Resilient: Teen Mental Health", therapist: "Nevedha White, LCSW", county: "Pinellas", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "$30 - $40/session", schedule: "Sundays & Tuesdays" },
-          { id: 6, groupName: "Adult DBT Skills Group", therapist: "Nevedha White, LCSW", county: "Pinellas", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "$30 - $40/session", schedule: "Sundays & Tuesdays" },
-          { id: 7, groupName: "Therapeutic Role Play Gaming (D&D)", therapist: "Matthew Anthony Fahy, LMHC", county: "Pinellas", modality: "In-Person", type: "Rolling", email: "[Update Email Here]", cost: "$35/session (BCBS, Optum, Humana, Cigna)", schedule: "3-hour sessions" },
-          { id: 8, groupName: "Online DBT Group Therapy", therapist: "Kristie Powell, LMHC", county: "Pinellas (Base)", modality: "Virtual", type: "Open", email: "[Update Email Here]", cost: "$40/session (Cash)", schedule: "Wednesdays, 12:00 PM" },
-          { id: 9, groupName: "Online Sex Addiction & Betrayal Recovery", therapist: "Duane Philip Osterlind, LMFT", county: "Pinellas (Base)", modality: "Virtual", type: "Open", email: "[Update Email Here]", cost: "$70/session (Cash)", schedule: "Tuesdays, 3:00 PM" },
-          { id: 10, groupName: "Teen Girls Support Group", therapist: "Nancy Wilson Silva, PhD, LMHC", county: "Pinellas", modality: "In-Person", type: "Rolling", email: "[Update Email Here]", cost: "Custom Pricing", schedule: "Rolling based on cohort" },
-
-          // HILLSBOROUGH COUNTY
-          { id: 11, groupName: "Women's Group", therapist: "Geri Carter, LMHC, CST", county: "Hillsborough", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "$20/session", schedule: "Every other Tuesday, 6:00 PM" },
-          { id: 12, groupName: "Pre-Teen & Teen Girls Group", therapist: "Lauren V. Ross, LMHC", county: "Hillsborough", modality: "In-Person", type: "Rolling", email: "[Update Email Here]", cost: "Cash/Superbill", schedule: "Rolling based on cohort" },
-          { id: 13, groupName: "Shelter from the Storm (Sexual Abuse)", therapist: "Lauren V. Ross, LMHC", county: "Hillsborough", modality: "In-Person", type: "Rolling", email: "[Update Email Here]", cost: "Cash/Superbill", schedule: "Rolling based on cohort" },
-          { id: 14, groupName: "Pathways to Recovery", therapist: "North Star Therapy", county: "Hillsborough", modality: "Hybrid", type: "Open", email: "[Update Email Here]", cost: "$20/session (Pay-as-you-go)", schedule: "Fridays 10:00 AM & 4:15 PM" },
-          { id: 15, groupName: "Calm and Clarity (Anxiety)", therapist: "North Star Therapy", county: "Hillsborough", modality: "Hybrid", type: "Open", email: "[Update Email Here]", cost: "$20/session (Pay-as-you-go)", schedule: "Fridays 3:00 PM / Mondays 6:30 PM" },
-          { id: 16, groupName: "Stronger Together (Couples)", therapist: "North Star Therapy", county: "Hillsborough", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "$20/session (Pay-as-you-go)", schedule: "Saturdays, 10:00 AM" },
-          { id: 17, groupName: "General Group Therapy", therapist: "Patricia Hernandez Poudevida, PsyD", county: "Hillsborough", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "Custom Pricing", schedule: "Thursdays, 6:00 PM" },
-          { id: 18, groupName: "KAP Group for Social Anxiety", therapist: "Dr. Lynne A. Santiago, PhD, LMHC", county: "Hillsborough", modality: "In-Person", type: "Closed", email: "[Update Email Here]", cost: "Custom (Medical + Clinical Fees)", schedule: "6-week program" },
-          { id: 19, groupName: "Annual Adventure Overnight (Boys 9-10)", therapist: "Logan Walters, LMHC", county: "Hillsborough", modality: "In-Person", type: "Annual", email: "[Update Email Here]", cost: "Customized based on retreat", schedule: "Annual 2-night trip" },
-          { id: 20, groupName: "Virtual OCD/Anxiety Disorders", therapist: "Mariah Ramirez, LMHC", county: "Hillsborough (Base)", modality: "Virtual", type: "Open", email: "[Update Email Here]", cost: "Free", schedule: "1st Wednesday, 6:00 PM" },
-          { id: 21, groupName: "Peak Performance Career Counseling", therapist: "Ann Witt, PhD, LMHC", county: "Hillsborough", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "$75 initial assessment", schedule: "2nd Monday of every month" },
-          { id: 22, groupName: "Black Men Matter", therapist: "Demetrius D. Williams, LMHC", county: "Hillsborough", modality: "In-Person", type: "Rolling", email: "[Update Email Here]", cost: "Custom Pricing", schedule: "Weekly sessions" },
-          { id: 23, groupName: "Recovery Support Group On-line", therapist: "Cory Albano, LMHC, CAP", county: "Hillsborough (Base)", modality: "Virtual", type: "Open", email: "[Update Email Here]", cost: "Custom Pricing", schedule: "Sundays, 1:30 PM" },
-          { id: 24, groupName: "Gay Men's Support Group", therapist: "Gary Howell, PsyD", county: "Hillsborough", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "Custom Pricing", schedule: "Wednesday evenings" },
-
-          // STATEWIDE VIRTUAL / INSTITUTIONAL
-          { id: 25, groupName: "Virtual IOP (High Acuity)", therapist: "Charlie Health", county: "Statewide", modality: "Virtual", type: "Rolling", email: "[Update Email Here]", cost: "Commercial/Medicaid/TRICARE", schedule: "9-12 hours/week" },
-          { id: 26, groupName: "Targeted Processing Groups", therapist: "Elite DNA Behavioral Health", county: "Statewide", modality: "Virtual", type: "Open", email: "[Update Email Here]", cost: "Medicare/Medicaid/VA/Sliding", schedule: "Tue/Wed/Fri (Varies)" },
-          { id: 27, groupName: "Condition-Specific Cohorts", therapist: "Mindful Care", county: "Statewide", modality: "Virtual", type: "Rolling", email: "[Update Email Here]", cost: "Aetna/Cigna/Oxford/etc.", schedule: "Flexible scheduling" },
-          { id: 28, groupName: "Massive Clinical Network Groups", therapist: "LifeStance Health", county: "Statewide", modality: "Hybrid", type: "Varies", email: "[Update Email Here]", cost: "Accepts 290+ Plans", schedule: "Varies heavily" },
-          { id: 29, groupName: "Specialized Interventions & EMDR", therapist: "Growing Branches Counseling", county: "Statewide", modality: "Virtual", type: "Rolling", email: "[Update Email Here]", cost: "Cash/Out-of-Network", schedule: "Flexible including evenings" }
-        ];
+        // --- YOUR GOOGLE SHEETS DATABASE API ---
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbweycjLZOjcVxXnK_GyxkcAdAo3dCbFUz0ezNb35fzpfYb5kB108wY2SO9VZt2I4NMYRQ/exec";
 
         function App() {
           // --- AUTHENTICATION STATE ---
-          const CORRECT_PIN = "8069"; // CHANGE THIS NUMBER RIGHT HERE
+          const CORRECT_PIN = "1234"; // CHANGE THIS NUMBER RIGHT HERE
           
-          // Checks if you already logged in during this browser session
           const [isAuthenticated, setIsAuthenticated] = useState(() => {
             return sessionStorage.getItem('tbta_auth') === 'true';
           });
           const [pinInput, setPinInput] = useState("");
           const [pinError, setPinError] = useState(false);
 
-          // --- DASHBOARD STATE ---
-          const [data, setData] = useState(directoryData);
+          // --- DATABASE STATE ---
+          const [data, setData] = useState([]);
+          const [isLoading, setIsLoading] = useState(false);
+          const [isSaving, setIsSaving] = useState(false);
           const [searchTerm, setSearchTerm] = useState("");
-          
+
+          // Fetch live data from Google Sheets
+          const loadData = async () => {
+            setIsLoading(true);
+            try {
+              const response = await fetch(SCRIPT_URL);
+              const result = await response.json();
+              setData(result);
+            } catch (error) {
+              console.error("Error fetching database:", error);
+            }
+            setIsLoading(false);
+          };
+
+          // Load data when user successfully logs in
+          useEffect(() => {
+            if (isAuthenticated) {
+              loadData();
+            }
+          }, [isAuthenticated]);
+
+          // --- MONTHLY TRACKING STATE ---
           const currentMonthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
           const [checkedOffIds, setCheckedOffIds] = useState([]);
           const [isMonthComplete, setIsMonthComplete] = useState(false);
           const [expandedGroupId, setExpandedGroupId] = useState(null);
-          
           const [copiedEmailId, setCopiedEmailId] = useState(null);
           const [copiedMessageId, setCopiedMessageId] = useState(null);
 
-          // Handle PIN Submission
-          const handleLogin = (e) => {
-            e.preventDefault();
-            if (pinInput === CORRECT_PIN) {
-              setIsAuthenticated(true);
-              sessionStorage.setItem('tbta_auth', 'true');
-              setPinError(false);
-            } else {
-              setPinError(true);
-              setPinInput("");
-            }
-          };
-
-          // Logout functionality
-          const handleLogout = () => {
-            setIsAuthenticated(false);
-            sessionStorage.removeItem('tbta_auth');
-            setPinInput("");
-          };
-
+          // Load tracking progress from browser memory
           useEffect(() => {
-            const savedData = localStorage.getItem('marvinVerificationData');
-            if (savedData) {
-              const parsedData = JSON.parse(savedData);
+            const savedProgress = localStorage.getItem('marvinVerificationData');
+            if (savedProgress) {
+              const parsedData = JSON.parse(savedProgress);
               if (parsedData.month === currentMonthYear) {
                 setCheckedOffIds(parsedData.checkedOffIds || []);
                 setIsMonthComplete(parsedData.isMonthComplete || false);
@@ -117,6 +84,49 @@
             }));
           }, [checkedOffIds, isMonthComplete, currentMonthYear]);
 
+          // --- ADD & DELETE GROUPS (BACKEND SYNC) ---
+          const [showAddForm, setShowAddForm] = useState(false);
+          const [newGroup, setNewGroup] = useState({
+            groupName: "", therapist: "", county: "Pinellas", modality: "In-Person", type: "Open", email: "", cost: "", schedule: ""
+          });
+
+          const handleAddSubmit = async (e) => {
+            e.preventDefault();
+            setIsSaving(true);
+            try {
+              // Send data to Google Sheets
+              await fetch(SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "add", data: newGroup })
+              });
+              // Reload the data directly from the sheet so we have the absolute newest version
+              await loadData();
+              setShowAddForm(false);
+              setNewGroup({ groupName: "", therapist: "", county: "Pinellas", modality: "In-Person", type: "Open", email: "", cost: "", schedule: "" });
+            } catch (error) {
+              alert("Error saving group to database. Please try again.");
+            }
+            setIsSaving(false);
+          };
+
+          const handleDelete = async (id, groupName) => {
+            if (window.confirm(`Are you sure you want to completely delete "${groupName}" from the database?`)) {
+              setIsSaving(true);
+              try {
+                // Tell Google Sheets to delete the row
+                await fetch(SCRIPT_URL, {
+                  method: "POST",
+                  body: JSON.stringify({ action: "delete", id: id })
+                });
+                await loadData();
+              } catch (error) {
+                alert("Error deleting group.");
+              }
+              setIsSaving(false);
+            }
+          };
+
+          // --- UTILITIES ---
           const copyToClipboard = (text, type, id) => {
             const textArea = document.createElement("textarea");
             textArea.value = text;
@@ -137,26 +147,28 @@
             document.body.removeChild(textArea);
           };
 
-          const toggleExpand = (id) => {
-            setExpandedGroupId(expandedGroupId === id ? null : id);
-          };
-
-          const markAsEmailed = (id) => {
-            if (!checkedOffIds.includes(id)) {
-              setCheckedOffIds([...checkedOffIds, id]);
+          const handleLogin = (e) => {
+            e.preventDefault();
+            if (pinInput === CORRECT_PIN) {
+              setIsAuthenticated(true);
+              sessionStorage.setItem('tbta_auth', 'true');
+              setPinError(false);
+            } else {
+              setPinError(true);
+              setPinInput("");
             }
-            setExpandedGroupId(null);
           };
 
-          const undoEmailed = (id) => {
-            setCheckedOffIds(checkedOffIds.filter(checkedId => checkedId !== id));
-            setIsMonthComplete(false);
+          const handleLogout = () => {
+            setIsAuthenticated(false);
+            sessionStorage.removeItem('tbta_auth');
+            setPinInput("");
           };
 
-          const handleCompleteMonth = () => {
-            setIsMonthComplete(true);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          };
+          const toggleExpand = (id) => setExpandedGroupId(expandedGroupId === id ? null : id);
+          const markAsEmailed = (id) => { if (!checkedOffIds.includes(id)) setCheckedOffIds([...checkedOffIds, id]); setExpandedGroupId(null); };
+          const undoEmailed = (id) => { setCheckedOffIds(checkedOffIds.filter(checkedId => checkedId !== id)); setIsMonthComplete(false); };
+          const handleCompleteMonth = () => { setIsMonthComplete(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
           const filteredData = useMemo(() => {
             return data.filter(group => {
@@ -167,13 +179,12 @@
           }, [data, searchTerm]);
 
           const getMessageTemplate = (therapistName, groupName) => {
-            const nameStr = therapistName.split(',')[0].trim(); 
+            const nameStr = therapistName ? therapistName.split(',')[0].trim() : "Provider"; 
             return `Hello ${nameStr},\n\nMy name is Marvin, I am a local mental health therapist working for Tampa Bay Therapist and Associates.\n\nI am looking to inquire about your group: ${groupName}. Are you currently accepting new clients for referrals to this group?\n\nCould you also please confirm if this is an open or closed group, and if there are any updates to your schedule or fees?\n\nThank you,\nMarvin`;
           };
 
           const progressPercentage = data.length > 0 ? Math.round((checkedOffIds.length / data.length) * 100) : 0;
           const allChecked = checkedOffIds.length === data.length && data.length > 0;
-          
           const today = new Date().getDate();
           const showBlinkingAlert = !isMonthComplete;
 
@@ -187,27 +198,12 @@
                     <h2 className="text-2xl font-bold text-gray-800">Secure Access</h2>
                     <p className="text-gray-500 text-sm mt-1">Tampa Bay Therapist & Associates Internal Directory</p>
                   </div>
-                  
                   <form onSubmit={handleLogin} className="space-y-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Enter PIN Code</label>
-                      <input 
-                        type="password" 
-                        maxLength="4"
-                        autoFocus
-                        value={pinInput}
-                        onChange={(e) => setPinInput(e.target.value)}
-                        className={`w-full px-4 py-3 text-center text-2xl tracking-[0.5em] border rounded-lg focus:outline-none focus:ring-2 ${pinError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-indigo-500'}`}
-                        placeholder="••••"
-                      />
+                      <input type="password" maxLength="4" autoFocus value={pinInput} onChange={(e) => setPinInput(e.target.value)} className={`w-full px-4 py-3 text-center text-2xl tracking-[0.5em] border rounded-lg focus:outline-none focus:ring-2 ${pinError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-indigo-500'}`} placeholder="••••" />
                       {pinError && <p className="text-red-500 text-sm mt-2 text-center font-medium">Incorrect PIN. Please try again.</p>}
                     </div>
-                    <button 
-                      type="submit" 
-                      className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition duration-200"
-                    >
-                      Access Dashboard
-                    </button>
+                    <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 transition duration-200">Access Dashboard</button>
                   </form>
                 </div>
               </div>
@@ -216,7 +212,15 @@
 
           // --- MAIN DASHBOARD UI ---
           return (
-            <div>
+            <div className="relative min-h-screen">
+              {/* Full-screen Saving Overlay */}
+              {isSaving && (
+                <div className="fixed inset-0 bg-white bg-opacity-80 z-50 flex flex-col items-center justify-center">
+                  <i className="fas fa-circle-notch fa-spin text-5xl text-indigo-600 mb-4"></i>
+                  <h2 className="text-xl font-bold text-gray-800">Syncing with Google Database...</h2>
+                </div>
+              )}
+
               {/* Header */}
               <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -225,13 +229,12 @@
                       <i className="fas fa-users text-indigo-600"></i>
                       Tampa Bay Therapist & Associates
                     </h1>
-                    <p className="text-sm text-gray-500 font-medium">Internal Group Referral Directory</p>
+                    <p className="text-sm text-gray-500 font-medium flex items-center gap-2">
+                      Internal Directory <span className="text-green-500 text-xs"><i className="fas fa-circle"></i> Live Sync Active</span>
+                    </p>
                   </div>
                   <div>
-                    <button 
-                      onClick={handleLogout}
-                      className="text-sm text-gray-500 hover:text-red-600 font-medium transition-colors"
-                    >
+                    <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-red-600 font-medium transition-colors">
                       <i className="fas fa-sign-out-alt mr-1"></i> Lock System
                     </button>
                   </div>
@@ -240,193 +243,162 @@
 
               <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
                 
-                {/* BIG BLINKING RED ALERT */}
+                {/* BLINKING ALERT */}
                 {showBlinkingAlert && (
                   <div className="bg-red-600 text-white p-5 animate-pulse flex flex-col sm:flex-row justify-between items-center text-lg sm:text-xl font-extrabold rounded-lg mb-8 border-4 border-red-800 shadow-2xl tracking-wide text-center sm:text-left gap-4">
-                    <div className="flex items-center gap-3">
-                      <i className="fas fa-exclamation-triangle text-3xl"></i>
-                      <span>URGENT: SEND OUT MONTHLY VERIFICATION EMAILS FOR {currentMonthYear.toUpperCase()}!</span>
-                    </div>
+                    <div className="flex items-center gap-3"><i className="fas fa-exclamation-triangle text-3xl"></i><span>URGENT: SEND OUT MONTHLY VERIFICATION EMAILS FOR {currentMonthYear.toUpperCase()}!</span></div>
                   </div>
                 )}
 
-                {/* Completion Success Banner */}
-                {isMonthComplete && (
-                  <div className="bg-green-600 text-white p-5 flex flex-col sm:flex-row justify-between items-center text-lg font-bold rounded-lg mb-8 shadow-lg tracking-wide text-center sm:text-left gap-4">
-                    <div className="flex items-center gap-3">
-                      <i className="fas fa-check-circle text-3xl"></i>
-                      <span>ALL EMAILS COMPLETE FOR {currentMonthYear.toUpperCase()}! GREAT JOB, MARVIN.</span>
-                    </div>
-                    <button 
-                      onClick={() => setIsMonthComplete(false)}
-                      className="px-4 py-2 bg-green-800 hover:bg-green-900 rounded text-sm text-white shadow cursor-pointer"
-                    >
-                      Undo
-                    </button>
-                  </div>
-                )}
-
-                {/* Progress Tracker */}
+                {/* PROGRESS TRACKER */}
                 <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-8">
                   <div className="flex justify-between items-end mb-2">
                     <div>
                       <h2 className="text-lg font-bold text-gray-800">Monthly Email Progress</h2>
                       <p className="text-sm text-gray-500">Track your verification emails for {currentMonthYear}</p>
                     </div>
-                    <div className="text-2xl font-black text-indigo-600">
-                      {checkedOffIds.length} / {data.length}
-                    </div>
+                    <div className="text-2xl font-black text-indigo-600">{checkedOffIds.length} / {data.length}</div>
                   </div>
-                  
                   <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
-                    <div 
-                      className="bg-indigo-600 h-4 rounded-full transition-all duration-500 ease-out" 
-                      style={{ width: `${progressPercentage}%` }}
-                    ></div>
+                    <div className="bg-indigo-600 h-4 rounded-full transition-all duration-500 ease-out" style={{ width: `${progressPercentage}%` }}></div>
                   </div>
-
                   {allChecked && !isMonthComplete && (
                     <div className="mt-6 text-center animate-bounce">
-                      <button 
-                        onClick={handleCompleteMonth}
-                        className="w-full sm:w-auto px-8 py-4 bg-green-500 hover:bg-green-600 text-white text-lg font-bold rounded-lg shadow-lg border border-green-700 transition-colors cursor-pointer"
-                      >
-                        🎉 MARK MONTH AS COMPLETE 🎉
-                      </button>
+                      <button onClick={handleCompleteMonth} className="w-full sm:w-auto px-8 py-4 bg-green-500 hover:bg-green-600 text-white text-lg font-bold rounded-lg shadow-lg border border-green-700 transition-colors cursor-pointer">🎉 MARK MONTH AS COMPLETE 🎉</button>
                     </div>
                   )}
                 </div>
 
-                {/* Search Bar */}
-                <div className="relative w-full mb-6 shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <i className="fas fa-search text-gray-400"></i>
+                {/* SEARCH & ADD BUTTON */}
+                <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                  <div className="relative flex-1 shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><i className="fas fa-search text-gray-400"></i></div>
+                    <input type="text" className="block w-full pl-11 pr-3 py-4 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg" placeholder="Search groups, therapists, or locations..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                   </div>
-                  <input
-                    type="text"
-                    className="block w-full pl-11 pr-3 py-4 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg"
-                    placeholder="Search groups, therapists, or locations..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+                  <button onClick={() => setShowAddForm(true)} className="px-6 py-4 bg-indigo-800 hover:bg-indigo-900 text-white font-bold rounded-lg shadow-sm flex items-center justify-center gap-2 transition-colors cursor-pointer whitespace-nowrap">
+                    <i className="fas fa-plus"></i> Add Group
+                  </button>
                 </div>
 
-                {/* Data List */}
-                <div className="space-y-4">
-                  {filteredData.length > 0 ? (
-                    filteredData.map((group) => {
-                      const isCheckedOff = checkedOffIds.includes(group.id);
-                      const isExpanded = expandedGroupId === group.id;
-                      const message = getMessageTemplate(group.therapist, group.groupName);
+                {/* ADD GROUP FORM */}
+                {showAddForm && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+                      <div className="flex justify-between items-center mb-6 border-b pb-4">
+                        <h2 className="text-2xl font-bold text-gray-800">Add New Directory Group</h2>
+                        <button onClick={() => setShowAddForm(false)} className="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
+                      </div>
+                      <form onSubmit={handleAddSubmit} className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Group Name *</label><input required type="text" value={newGroup.groupName} onChange={e => setNewGroup({...newGroup, groupName: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g. Adult DBT Skills" /></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Therapist/Provider *</label><input required type="text" value={newGroup.therapist} onChange={e => setNewGroup({...newGroup, therapist: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g. John Doe, LMHC" /></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">County/Location *</label><input required type="text" value={newGroup.county} onChange={e => setNewGroup({...newGroup, county: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" /></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Provider Email *</label><input required type="email" value={newGroup.email} onChange={e => setNewGroup({...newGroup, email: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" /></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Modality</label><select value={newGroup.modality} onChange={e => setNewGroup({...newGroup, modality: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500"><option>In-Person</option><option>Virtual</option><option>Hybrid</option></select></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Group Type</label><select value={newGroup.type} onChange={e => setNewGroup({...newGroup, type: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500"><option>Open</option><option>Closed</option><option>Rolling</option></select></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Cost / Insurance</label><input type="text" value={newGroup.cost} onChange={e => setNewGroup({...newGroup, cost: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g. $40/session or BCBS" /></div>
+                          <div><label className="block text-sm font-medium text-gray-700 mb-1">Schedule</label><input type="text" value={newGroup.schedule} onChange={e => setNewGroup({...newGroup, schedule: e.target.value})} className="w-full p-2 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g. Mondays 6:00 PM" /></div>
+                        </div>
+                        <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                          <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded font-medium">Cancel</button>
+                          <button type="submit" className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-bold">Save Group to Database</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
 
-                      return (
-                        <div key={group.id} className={`bg-white rounded-lg border-2 shadow-sm transition-all duration-200 ${isCheckedOff ? 'border-green-300 opacity-60 bg-green-50' : 'border-gray-200 hover:border-indigo-300'}`}>
-                          
-                          {/* Card Header */}
-                          <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                {isCheckedOff && <i className="fas fa-check-circle text-green-500 text-xl"></i>}
-                                <h3 className={`text-xl font-bold ${isCheckedOff ? 'text-green-800 line-through' : 'text-gray-900'}`}>
-                                  {group.groupName}
-                                </h3>
-                              </div>
-                              <p className="text-gray-600 font-medium mt-1">Therapist/Provider: <span className="text-gray-900 font-bold">{group.therapist}</span></p>
-                              <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-600">
-                                <span className="flex items-center"><i className="fas fa-map-marker-alt mr-1"></i> {group.county}</span>
-                                <span className="flex items-center"><i className="fas fa-video mr-1"></i> {group.modality}</span>
-                                <span className="flex items-center"><i className="fas fa-dollar-sign mr-1"></i> {group.cost}</span>
-                              </div>
-                              <p className="text-sm text-gray-500 mt-2"><i className="far fa-clock mr-1"></i> {group.schedule}</p>
-                            </div>
+                {/* LOADING STATE */}
+                {isLoading ? (
+                  <div className="bg-white p-16 rounded-lg border border-gray-200 text-center shadow-sm">
+                    <i className="fas fa-spinner fa-spin text-5xl text-indigo-500 mb-4"></i>
+                    <h3 className="text-xl font-bold text-gray-800">Fetching live database...</h3>
+                    <p className="text-gray-500 mt-2">Reading from Google Sheets</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {filteredData.length > 0 ? (
+                      filteredData.map((group) => {
+                        const isCheckedOff = checkedOffIds.includes(group.id);
+                        const isExpanded = expandedGroupId === group.id;
+                        const message = getMessageTemplate(group.therapist, group.groupName);
 
-                            {/* Action Buttons */}
-                            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                              {isCheckedOff ? (
-                                <button 
-                                  onClick={() => undoEmailed(group.id)}
-                                  className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 text-sm font-medium w-full sm:w-auto cursor-pointer"
-                                >
-                                  Undo
-                                </button>
-                              ) : (
-                                <button 
-                                  onClick={() => toggleExpand(group.id)}
-                                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-bold shadow flex items-center justify-center gap-2 w-full sm:w-auto transition-colors cursor-pointer"
-                                >
-                                  Send Email Verify <i className={`fas ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'}`}></i>
-                                </button>
-                              )}
-                            </div>
-                          </div>
+                        return (
+                          <div key={group.id} className={`bg-white rounded-lg border-2 shadow-sm transition-all duration-200 relative ${isCheckedOff ? 'border-green-300 opacity-60 bg-green-50' : 'border-gray-200 hover:border-indigo-300'}`}>
+                            
+                            {/* DELETE BUTTON */}
+                            <button onClick={() => handleDelete(group.id, group.groupName)} className="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors z-10 p-2" title="Delete from Database"><i className="fas fa-trash-alt text-lg"></i></button>
 
-                          {/* Expandable Copy/Paste Panel */}
-                          {isExpanded && !isCheckedOff && (
-                            <div className="border-t border-gray-200 bg-gray-50 p-5 rounded-b-lg">
-                              <h4 className="font-bold text-gray-800 mb-3 text-lg">Email Draft for {group.therapist.split(',')[0]}</h4>
-                              
-                              {/* Email Address Section */}
-                              <div className="mb-4">
-                                <label className="block text-sm font-semibold text-gray-600 mb-1">To: (Therapist Email)</label>
-                                <div className="flex">
-                                  <input 
-                                    type="text" 
-                                    readOnly 
-                                    value={group.email} 
-                                    className="flex-1 p-3 bg-white border border-gray-300 rounded-l-md text-gray-800 font-medium"
-                                  />
-                                  <button 
-                                    onClick={() => copyToClipboard(group.email, 'email', group.id)}
-                                    className={`px-4 py-3 flex items-center justify-center font-bold rounded-r-md transition-colors cursor-pointer ${copiedEmailId === group.id ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                                  >
-                                    {copiedEmailId === group.id ? <><i className="fas fa-check mr-1"></i> Copied!</> : <><i className="far fa-copy mr-1"></i> Copy Email</>}
-                                  </button>
+                            {/* Card Header */}
+                            <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pr-12">
+                              <div className="flex-1 w-full">
+                                <div className="flex items-center gap-2">
+                                  {isCheckedOff && <i className="fas fa-check-circle text-green-500 text-xl"></i>}
+                                  <h3 className={`text-xl font-bold ${isCheckedOff ? 'text-green-800 line-through' : 'text-gray-900'}`}>{group.groupName}</h3>
                                 </div>
+                                <p className="text-gray-600 font-medium mt-1">Therapist/Provider: <span className="text-gray-900 font-bold">{group.therapist}</span></p>
+                                <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-600">
+                                  <span className="flex items-center"><i className="fas fa-map-marker-alt mr-1"></i> {group.county}</span>
+                                  <span className="flex items-center"><i className="fas fa-video mr-1"></i> {group.modality}</span>
+                                  <span className="flex items-center"><i className="fas fa-dollar-sign mr-1"></i> {group.cost}</span>
+                                </div>
+                                <p className="text-sm text-gray-500 mt-2"><i className="far fa-clock mr-1"></i> {group.schedule}</p>
                               </div>
 
-                              {/* Message Body Section */}
-                              <div className="mb-6">
-                                <label className="block text-sm font-semibold text-gray-600 mb-1">Message:</label>
-                                <div className="relative">
-                                  <textarea 
-                                    readOnly 
-                                    value={message} 
-                                    rows={8}
-                                    className="w-full p-4 bg-white border border-gray-300 rounded-md text-gray-800 leading-relaxed font-medium resize-none"
-                                  ></textarea>
-                                  <div className="absolute bottom-4 right-4">
-                                    <button 
-                                      onClick={() => copyToClipboard(message, 'message', group.id)}
-                                      className={`px-4 py-2 flex items-center font-bold shadow-sm rounded-md transition-colors cursor-pointer ${copiedMessageId === group.id ? 'bg-green-500 text-white' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-800'}`}
-                                    >
-                                      {copiedMessageId === group.id ? <><i className="fas fa-check mr-1"></i> Copied!</> : <><i className="far fa-copy mr-1"></i> Copy Message</>}
+                              {/* Action Buttons */}
+                              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-4 sm:mt-0">
+                                {isCheckedOff ? (
+                                  <button onClick={() => undoEmailed(group.id)} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 text-sm font-medium w-full sm:w-auto cursor-pointer">Undo</button>
+                                ) : (
+                                  <button onClick={() => toggleExpand(group.id)} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-bold shadow flex items-center justify-center gap-2 w-full sm:w-auto transition-colors cursor-pointer">Send Email Verify <i className={`fas ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'}`}></i></button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Expandable Panel */}
+                            {isExpanded && !isCheckedOff && (
+                              <div className="border-t border-gray-200 bg-gray-50 p-5 rounded-b-lg">
+                                <h4 className="font-bold text-gray-800 mb-3 text-lg">Email Draft for {group.therapist ? group.therapist.split(',')[0] : 'Provider'}</h4>
+                                <div className="mb-4">
+                                  <label className="block text-sm font-semibold text-gray-600 mb-1">To: (Therapist Email)</label>
+                                  <div className="flex">
+                                    <input type="text" readOnly value={group.email} className="flex-1 p-3 bg-white border border-gray-300 rounded-l-md text-gray-800 font-medium"/>
+                                    <button onClick={() => copyToClipboard(group.email, 'email', group.id)} className={`px-4 py-3 flex items-center justify-center font-bold rounded-r-md transition-colors cursor-pointer ${copiedEmailId === group.id ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}>
+                                      {copiedEmailId === group.id ? <><i className="fas fa-check mr-1"></i> Copied!</> : <><i className="far fa-copy mr-1"></i> Copy Email</>}
                                     </button>
                                   </div>
                                 </div>
+                                <div className="mb-6">
+                                  <label className="block text-sm font-semibold text-gray-600 mb-1">Message:</label>
+                                  <div className="relative">
+                                    <textarea readOnly value={message} rows={8} className="w-full p-4 bg-white border border-gray-300 rounded-md text-gray-800 leading-relaxed font-medium resize-none"></textarea>
+                                    <div className="absolute bottom-4 right-4">
+                                      <button onClick={() => copyToClipboard(message, 'message', group.id)} className={`px-4 py-2 flex items-center font-bold shadow-sm rounded-md transition-colors cursor-pointer ${copiedMessageId === group.id ? 'bg-green-500 text-white' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-800'}`}>
+                                        {copiedMessageId === group.id ? <><i className="fas fa-check mr-1"></i> Copied!</> : <><i className="far fa-copy mr-1"></i> Copy Message</>}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                                  <p className="text-sm text-gray-500 italic">Once you paste this and send it, check this off.</p>
+                                  <button onClick={() => markAsEmailed(group.id)} className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-md shadow-md flex items-center gap-2 text-lg transition-transform active:scale-95 cursor-pointer">
+                                    <i className="fas fa-check-circle text-xl"></i> Mark as Emailed
+                                  </button>
+                                </div>
                               </div>
-
-                              {/* Completion Step */}
-                              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                                <p className="text-sm text-gray-500 italic">Once you paste this and send it, check this off.</p>
-                                <button 
-                                  onClick={() => markAsEmailed(group.id)}
-                                  className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-md shadow-md flex items-center gap-2 text-lg transition-transform active:scale-95 cursor-pointer"
-                                >
-                                  <i className="fas fa-check-circle text-xl"></i>
-                                  Mark as Emailed
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="bg-white p-8 rounded-lg border border-gray-200 text-center">
-                      <p className="text-gray-500 text-lg">No groups found matching your search.</p>
-                    </div>
-                  )}
-                </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="bg-white p-12 rounded-lg border border-gray-200 text-center">
+                        <i className="fas fa-folder-open text-4xl text-gray-300 mb-4"></i>
+                        <h3 className="text-xl font-bold text-gray-700">Database is Empty</h3>
+                        <p className="text-gray-500 text-lg mt-2">Use the "Add Group" button above to add a new therapist, or open your Google Sheet to type them in manually.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </main>
             </div>
           );
