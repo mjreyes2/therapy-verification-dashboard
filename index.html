@@ -1,0 +1,377 @@
+Marvin, this is *exactly* the kind of real-world clinical data we needed! Yes, we are absolutely going to use this exact research information to populate your dashboard.
+
+Based on the exhaustive research you provided, I have extracted and mapped a total of **29 distinct therapeutic resources**. Specifically, this breaks down to **10 specialized groups in Pinellas County**, **14 groups in Hillsborough County**, and **5 major statewide/institutional networks** (such as Charlie Health and BayCare).
+
+**One important note:** The research text you provided detailed the therapists, group names, locations, costs, and times perfectly, but it *did not* include their direct email addresses. I have formatted the database below with all your research, but I put **`[Update Email Here]`** in the email slot for each provider. You will just need to quickly type their real emails into the code before you start clicking the "Send Email Verify" buttons.
+
+Here is your fully updated `index.html` file, completely powered by your actual research data. Copy and paste this over your current file on GitHub:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tampa Bay Therapist Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans pb-20">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- ACTUAL CLINICAL RESEARCH DATA ---
+        const directoryData = [
+          // PINELLAS COUNTY
+          { id: 1, groupName: "DBT Group for Teens", therapist: "Alexis Hiegel, LMHC", county: "Pinellas", modality: "Hybrid", type: "Rolling", email: "[Update Email Here]", cost: "$35/session (Cash/Superbill)", schedule: "10-week program (Rolling)" },
+          { id: 2, groupName: "Mindful Teens Summer DBT Support", therapist: "Dr. Mary Perleoni, PhD, LMHC", county: "Pinellas", modality: "In-Person", type: "Rolling", email: "[Update Email Here]", cost: "Custom Pricing/Superbills", schedule: "Summer sessions (Rolling)" },
+          { id: 3, groupName: "Breaking Chronic and Unhealthy Patterns (Adults)", therapist: "Holly Gardner, LMHC", county: "Pinellas", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "$40/session (Cash)", schedule: "Wednesdays, 6:00 PM" },
+          { id: 4, groupName: "Breaking Chronic Patterns (Teens)", therapist: "Holly Gardner, LMHC", county: "Pinellas", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "$40/session (Cash)", schedule: "Thursdays, 6:00 PM" },
+          { id: 5, groupName: "Rooted and Resilient: Teen Mental Health", therapist: "Nevedha White, LCSW", county: "Pinellas", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "$30 - $40/session", schedule: "Sundays & Tuesdays" },
+          { id: 6, groupName: "Adult DBT Skills Group", therapist: "Nevedha White, LCSW", county: "Pinellas", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "$30 - $40/session", schedule: "Sundays & Tuesdays" },
+          { id: 7, groupName: "Therapeutic Role Play Gaming (D&D)", therapist: "Matthew Anthony Fahy, LMHC", county: "Pinellas", modality: "In-Person", type: "Rolling", email: "[Update Email Here]", cost: "$35/session (BCBS, Optum, Humana, Cigna)", schedule: "3-hour sessions" },
+          { id: 8, groupName: "Online DBT Group Therapy", therapist: "Kristie Powell, LMHC", county: "Pinellas (Base)", modality: "Virtual", type: "Open", email: "[Update Email Here]", cost: "$40/session (Cash)", schedule: "Wednesdays, 12:00 PM" },
+          { id: 9, groupName: "Online Sex Addiction & Betrayal Recovery", therapist: "Duane Philip Osterlind, LMFT", county: "Pinellas (Base)", modality: "Virtual", type: "Open", email: "[Update Email Here]", cost: "$70/session (Cash)", schedule: "Tuesdays, 3:00 PM" },
+          { id: 10, groupName: "Teen Girls Support Group", therapist: "Nancy Wilson Silva, PhD, LMHC", county: "Pinellas", modality: "In-Person", type: "Rolling", email: "[Update Email Here]", cost: "Custom Pricing", schedule: "Rolling based on cohort" },
+
+          // HILLSBOROUGH COUNTY
+          { id: 11, groupName: "Women's Group", therapist: "Geri Carter, LMHC, CST", county: "Hillsborough", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "$20/session", schedule: "Every other Tuesday, 6:00 PM" },
+          { id: 12, groupName: "Pre-Teen & Teen Girls Group", therapist: "Lauren V. Ross, LMHC", county: "Hillsborough", modality: "In-Person", type: "Rolling", email: "[Update Email Here]", cost: "Cash/Superbill", schedule: "Rolling based on cohort" },
+          { id: 13, groupName: "Shelter from the Storm (Sexual Abuse)", therapist: "Lauren V. Ross, LMHC", county: "Hillsborough", modality: "In-Person", type: "Rolling", email: "[Update Email Here]", cost: "Cash/Superbill", schedule: "Rolling based on cohort" },
+          { id: 14, groupName: "Pathways to Recovery", therapist: "North Star Therapy", county: "Hillsborough", modality: "Hybrid", type: "Open", email: "[Update Email Here]", cost: "$20/session (Pay-as-you-go)", schedule: "Fridays 10:00 AM & 4:15 PM" },
+          { id: 15, groupName: "Calm and Clarity (Anxiety)", therapist: "North Star Therapy", county: "Hillsborough", modality: "Hybrid", type: "Open", email: "[Update Email Here]", cost: "$20/session (Pay-as-you-go)", schedule: "Fridays 3:00 PM / Mondays 6:30 PM" },
+          { id: 16, groupName: "Stronger Together (Couples)", therapist: "North Star Therapy", county: "Hillsborough", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "$20/session (Pay-as-you-go)", schedule: "Saturdays, 10:00 AM" },
+          { id: 17, groupName: "General Group Therapy", therapist: "Patricia Hernandez Poudevida, PsyD", county: "Hillsborough", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "Custom Pricing", schedule: "Thursdays, 6:00 PM" },
+          { id: 18, groupName: "KAP Group for Social Anxiety", therapist: "Dr. Lynne A. Santiago, PhD, LMHC", county: "Hillsborough", modality: "In-Person", type: "Closed", email: "[Update Email Here]", cost: "Custom (Medical + Clinical Fees)", schedule: "6-week program" },
+          { id: 19, groupName: "Annual Adventure Overnight (Boys 9-10)", therapist: "Logan Walters, LMHC", county: "Hillsborough", modality: "In-Person", type: "Annual", email: "[Update Email Here]", cost: "Customized based on retreat", schedule: "Annual 2-night trip" },
+          { id: 20, groupName: "Virtual OCD/Anxiety Disorders", therapist: "Mariah Ramirez, LMHC", county: "Hillsborough (Base)", modality: "Virtual", type: "Open", email: "[Update Email Here]", cost: "Free", schedule: "1st Wednesday, 6:00 PM" },
+          { id: 21, groupName: "Peak Performance Career Counseling", therapist: "Ann Witt, PhD, LMHC", county: "Hillsborough", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "$75 initial assessment", schedule: "2nd Monday of every month" },
+          { id: 22, groupName: "Black Men Matter", therapist: "Demetrius D. Williams, LMHC", county: "Hillsborough", modality: "In-Person", type: "Rolling", email: "[Update Email Here]", cost: "Custom Pricing", schedule: "Weekly sessions" },
+          { id: 23, groupName: "Recovery Support Group On-line", therapist: "Cory Albano, LMHC, CAP", county: "Hillsborough (Base)", modality: "Virtual", type: "Open", email: "[Update Email Here]", cost: "Custom Pricing", schedule: "Sundays, 1:30 PM" },
+          { id: 24, groupName: "Gay Men's Support Group", therapist: "Gary Howell, PsyD", county: "Hillsborough", modality: "In-Person", type: "Open", email: "[Update Email Here]", cost: "Custom Pricing", schedule: "Wednesday evenings" },
+
+          // STATEWIDE VIRTUAL / INSTITUTIONAL
+          { id: 25, groupName: "Virtual IOP (High Acuity)", therapist: "Charlie Health", county: "Statewide", modality: "Virtual", type: "Rolling", email: "[Update Email Here]", cost: "Commercial/Medicaid/TRICARE", schedule: "9-12 hours/week" },
+          { id: 26, groupName: "Targeted Processing Groups", therapist: "Elite DNA Behavioral Health", county: "Statewide", modality: "Virtual", type: "Open", email: "[Update Email Here]", cost: "Medicare/Medicaid/VA/Sliding", schedule: "Tue/Wed/Fri (Varies)" },
+          { id: 27, groupName: "Condition-Specific Cohorts", therapist: "Mindful Care", county: "Statewide", modality: "Virtual", type: "Rolling", email: "[Update Email Here]", cost: "Aetna/Cigna/Oxford/etc.", schedule: "Flexible scheduling" },
+          { id: 28, groupName: "Massive Clinical Network Groups", therapist: "LifeStance Health", county: "Statewide", modality: "Hybrid", type: "Varies", email: "[Update Email Here]", cost: "Accepts 290+ Plans", schedule: "Varies heavily" },
+          { id: 29, groupName: "Specialized Interventions & EMDR", therapist: "Growing Branches Counseling", county: "Statewide", modality: "Virtual", type: "Rolling", email: "[Update Email Here]", cost: "Cash/Out-of-Network", schedule: "Flexible including evenings" }
+        ];
+
+        function App() {
+          const [data, setData] = useState(directoryData);
+          const [searchTerm, setSearchTerm] = useState("");
+          
+          const currentMonthYear = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+          const [checkedOffIds, setCheckedOffIds] = useState([]);
+          const [isMonthComplete, setIsMonthComplete] = useState(false);
+          const [expandedGroupId, setExpandedGroupId] = useState(null);
+          
+          const [copiedEmailId, setCopiedEmailId] = useState(null);
+          const [copiedMessageId, setCopiedMessageId] = useState(null);
+
+          useEffect(() => {
+            const savedData = localStorage.getItem('marvinVerificationData');
+            if (savedData) {
+              const parsedData = JSON.parse(savedData);
+              if (parsedData.month === currentMonthYear) {
+                setCheckedOffIds(parsedData.checkedOffIds || []);
+                setIsMonthComplete(parsedData.isMonthComplete || false);
+              }
+            }
+          }, [currentMonthYear]);
+
+          useEffect(() => {
+            localStorage.setItem('marvinVerificationData', JSON.stringify({
+              month: currentMonthYear,
+              checkedOffIds,
+              isMonthComplete
+            }));
+          }, [checkedOffIds, isMonthComplete, currentMonthYear]);
+
+          const copyToClipboard = (text, type, id) => {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+              document.execCommand('copy');
+              if (type === 'email') {
+                setCopiedEmailId(id);
+                setTimeout(() => setCopiedEmailId(null), 2000);
+              } else {
+                setCopiedMessageId(id);
+                setTimeout(() => setCopiedMessageId(null), 2000);
+              }
+            } catch (err) {
+              console.error('Failed to copy', err);
+            }
+            document.body.removeChild(textArea);
+          };
+
+          const toggleExpand = (id) => {
+            setExpandedGroupId(expandedGroupId === id ? null : id);
+          };
+
+          const markAsEmailed = (id) => {
+            if (!checkedOffIds.includes(id)) {
+              setCheckedOffIds([...checkedOffIds, id]);
+            }
+            setExpandedGroupId(null);
+          };
+
+          const undoEmailed = (id) => {
+            setCheckedOffIds(checkedOffIds.filter(checkedId => checkedId !== id));
+            setIsMonthComplete(false);
+          };
+
+          const handleCompleteMonth = () => {
+            setIsMonthComplete(true);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          };
+
+          const filteredData = useMemo(() => {
+            return data.filter(group => {
+              return group.groupName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                     group.therapist.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                     group.county.toLowerCase().includes(searchTerm.toLowerCase());
+            });
+          }, [data, searchTerm]);
+
+          const getMessageTemplate = (therapistName, groupName) => {
+            const nameStr = therapistName.split(',')[0].trim(); 
+            return `Hello ${nameStr},\n\nMy name is Marvin, I am a local mental health therapist working for Tampa Bay Therapist and Associates.\n\nI am looking to inquire about your group: ${groupName}. Are you currently accepting new clients for referrals to this group?\n\nCould you also please confirm if this is an open or closed group, and if there are any updates to your schedule or fees?\n\nThank you,\nMarvin`;
+          };
+
+          const progressPercentage = data.length > 0 ? Math.round((checkedOffIds.length / data.length) * 100) : 0;
+          const allChecked = checkedOffIds.length === data.length && data.length > 0;
+          
+          const today = new Date().getDate();
+          const showBlinkingAlert = !isMonthComplete;
+
+          return (
+            <div>
+              {/* Header */}
+              <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-20">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+                  <div>
+                    <h1 className="text-2xl font-bold text-indigo-800 flex items-center gap-2">
+                      <i className="fas fa-users text-indigo-600"></i>
+                      Tampa Bay Therapist & Associates
+                    </h1>
+                    <p className="text-sm text-gray-500 font-medium">Internal Group Referral Directory</p>
+                  </div>
+                  <div className="text-right hidden md:block">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                      Welcome, Marvin
+                    </span>
+                  </div>
+                </div>
+              </header>
+
+              <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+                
+                {/* BIG BLINKING RED ALERT */}
+                {showBlinkingAlert && (
+                  <div className="bg-red-600 text-white p-5 animate-pulse flex flex-col sm:flex-row justify-between items-center text-lg sm:text-xl font-extrabold rounded-lg mb-8 border-4 border-red-800 shadow-2xl tracking-wide text-center sm:text-left gap-4">
+                    <div className="flex items-center gap-3">
+                      <i className="fas fa-exclamation-triangle text-3xl"></i>
+                      <span>URGENT: SEND OUT MONTHLY VERIFICATION EMAILS FOR {currentMonthYear.toUpperCase()}!</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Completion Success Banner */}
+                {isMonthComplete && (
+                  <div className="bg-green-600 text-white p-5 flex flex-col sm:flex-row justify-between items-center text-lg font-bold rounded-lg mb-8 shadow-lg tracking-wide text-center sm:text-left gap-4">
+                    <div className="flex items-center gap-3">
+                      <i className="fas fa-check-circle text-3xl"></i>
+                      <span>ALL EMAILS COMPLETE FOR {currentMonthYear.toUpperCase()}! GREAT JOB, MARVIN.</span>
+                    </div>
+                    <button 
+                      onClick={() => setIsMonthComplete(false)}
+                      className="px-4 py-2 bg-green-800 hover:bg-green-900 rounded text-sm text-white shadow cursor-pointer"
+                    >
+                      Undo
+                    </button>
+                  </div>
+                )}
+
+                {/* Progress Tracker */}
+                <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-8">
+                  <div className="flex justify-between items-end mb-2">
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-800">Monthly Email Progress</h2>
+                      <p className="text-sm text-gray-500">Track your verification emails for {currentMonthYear}</p>
+                    </div>
+                    <div className="text-2xl font-black text-indigo-600">
+                      {checkedOffIds.length} / {data.length}
+                    </div>
+                  </div>
+                  
+                  <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
+                    <div 
+                      className="bg-indigo-600 h-4 rounded-full transition-all duration-500 ease-out" 
+                      style={{ width: `${progressPercentage}%` }}
+                    ></div>
+                  </div>
+
+                  {allChecked && !isMonthComplete && (
+                    <div className="mt-6 text-center animate-bounce">
+                      <button 
+                        onClick={handleCompleteMonth}
+                        className="w-full sm:w-auto px-8 py-4 bg-green-500 hover:bg-green-600 text-white text-lg font-bold rounded-lg shadow-lg border border-green-700 transition-colors cursor-pointer"
+                      >
+                        🎉 MARK MONTH AS COMPLETE 🎉
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative w-full mb-6 shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i className="fas fa-search text-gray-400"></i>
+                  </div>
+                  <input
+                    type="text"
+                    className="block w-full pl-11 pr-3 py-4 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+                    placeholder="Search groups, therapists, or locations..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+
+                {/* Data List */}
+                <div className="space-y-4">
+                  {filteredData.length > 0 ? (
+                    filteredData.map((group) => {
+                      const isCheckedOff = checkedOffIds.includes(group.id);
+                      const isExpanded = expandedGroupId === group.id;
+                      const message = getMessageTemplate(group.therapist, group.groupName);
+
+                      return (
+                        <div key={group.id} className={`bg-white rounded-lg border-2 shadow-sm transition-all duration-200 ${isCheckedOff ? 'border-green-300 opacity-60 bg-green-50' : 'border-gray-200 hover:border-indigo-300'}`}>
+                          
+                          {/* Card Header */}
+                          <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                {isCheckedOff && <i className="fas fa-check-circle text-green-500 text-xl"></i>}
+                                <h3 className={`text-xl font-bold ${isCheckedOff ? 'text-green-800 line-through' : 'text-gray-900'}`}>
+                                  {group.groupName}
+                                </h3>
+                              </div>
+                              <p className="text-gray-600 font-medium mt-1">Therapist/Provider: <span className="text-gray-900 font-bold">{group.therapist}</span></p>
+                              <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-600">
+                                <span className="flex items-center"><i className="fas fa-map-marker-alt mr-1"></i> {group.county}</span>
+                                <span className="flex items-center"><i className="fas fa-video mr-1"></i> {group.modality}</span>
+                                <span className="flex items-center"><i className="fas fa-dollar-sign mr-1"></i> {group.cost}</span>
+                              </div>
+                              <p className="text-sm text-gray-500 mt-2"><i className="far fa-clock mr-1"></i> {group.schedule}</p>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                              {isCheckedOff ? (
+                                <button 
+                                  onClick={() => undoEmailed(group.id)}
+                                  className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 text-sm font-medium w-full sm:w-auto cursor-pointer"
+                                >
+                                  Undo
+                                </button>
+                              ) : (
+                                <button 
+                                  onClick={() => toggleExpand(group.id)}
+                                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-bold shadow flex items-center justify-center gap-2 w-full sm:w-auto transition-colors cursor-pointer"
+                                >
+                                  Send Email Verify <i className={`fas ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'}`}></i>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Expandable Copy/Paste Panel */}
+                          {isExpanded && !isCheckedOff && (
+                            <div className="border-t border-gray-200 bg-gray-50 p-5 rounded-b-lg">
+                              <h4 className="font-bold text-gray-800 mb-3 text-lg">Email Draft for {group.therapist.split(',')[0]}</h4>
+                              
+                              {/* Email Address Section */}
+                              <div className="mb-4">
+                                <label className="block text-sm font-semibold text-gray-600 mb-1">To: (Therapist Email)</label>
+                                <div className="flex">
+                                  <input 
+                                    type="text" 
+                                    readOnly 
+                                    value={group.email} 
+                                    className="flex-1 p-3 bg-white border border-gray-300 rounded-l-md text-gray-800 font-medium"
+                                  />
+                                  <button 
+                                    onClick={() => copyToClipboard(group.email, 'email', group.id)}
+                                    className={`px-4 py-3 flex items-center justify-center font-bold rounded-r-md transition-colors cursor-pointer ${copiedEmailId === group.id ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                                  >
+                                    {copiedEmailId === group.id ? <><i className="fas fa-check mr-1"></i> Copied!</> : <><i className="far fa-copy mr-1"></i> Copy Email</>}
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Message Body Section */}
+                              <div className="mb-6">
+                                <label className="block text-sm font-semibold text-gray-600 mb-1">Message:</label>
+                                <div className="relative">
+                                  <textarea 
+                                    readOnly 
+                                    value={message} 
+                                    rows={8}
+                                    className="w-full p-4 bg-white border border-gray-300 rounded-md text-gray-800 leading-relaxed font-medium resize-none"
+                                  ></textarea>
+                                  <div className="absolute bottom-4 right-4">
+                                    <button 
+                                      onClick={() => copyToClipboard(message, 'message', group.id)}
+                                      className={`px-4 py-2 flex items-center font-bold shadow-sm rounded-md transition-colors cursor-pointer ${copiedMessageId === group.id ? 'bg-green-500 text-white' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-800'}`}
+                                    >
+                                      {copiedMessageId === group.id ? <><i className="fas fa-check mr-1"></i> Copied!</> : <><i className="far fa-copy mr-1"></i> Copy Message</>}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Completion Step */}
+                              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                                <p className="text-sm text-gray-500 italic">Once you paste this and send it, check this off.</p>
+                                <button 
+                                  onClick={() => markAsEmailed(group.id)}
+                                  className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-md shadow-md flex items-center gap-2 text-lg transition-transform active:scale-95 cursor-pointer"
+                                >
+                                  <i className="fas fa-check-circle text-xl"></i>
+                                  Mark as Emailed
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="bg-white p-8 rounded-lg border border-gray-200 text-center">
+                      <p className="text-gray-500 text-lg">No groups found matching your search.</p>
+                    </div>
+                  )}
+                </div>
+              </main>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
+
+```
