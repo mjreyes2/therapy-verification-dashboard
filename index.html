@@ -44,6 +44,7 @@
           const [currentGroup, setCurrentGroup] = useState({});
           const [expandedId, setExpandedId] = useState(null);
           const [copiedType, setCopiedType] = useState(null);
+          const [customMessages, setCustomMessages] = useState({});
 
           const loadData = async () => {
             setIsLoading(true);
@@ -100,9 +101,6 @@
             setTimeout(() => setCopiedType(null), 2000);
           };
 
-          // We use a state to track custom message edits so it doesn't revert while typing
-          const [customMessages, setCustomMessages] = useState({});
-
           const getEmailDraft = (g) => {
             if (customMessages[g.id]) return customMessages[g.id];
             const firstName = g.therapist ? g.therapist.split(' ')[0] : "Provider";
@@ -130,7 +128,7 @@
                 <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full border-t-4 border-indigo-600">
                   <div className="text-center mb-6">
                     <i className="fas fa-lock text-4xl text-indigo-600 mb-3"></i>
-                    <h2 className="text-2xl font-bold text-gray-800 uppercase tracking-tighter">Secure Access</h2>
+                    <h2 className="text-2xl font-bold text-gray-800 uppercase tracking-tighter font-bold">Secure Access</h2>
                     <p className="text-gray-500 text-sm mt-1">Tampa Bay Therapist & Associates</p>
                   </div>
                   <form onSubmit={(e) => { e.preventDefault(); if(pinInput === CORRECT_PIN) { setIsAuthenticated(true); sessionStorage.setItem('tbta_auth', 'true'); } else { alert("Wrong PIN"); setPinInput(""); } }} className="space-y-6">
@@ -145,9 +143,9 @@
           return (
             <div className="relative min-h-screen">
               {isLoading && (
-                <div className="fixed inset-0 bg-white/80 z-[100] flex flex-col items-center justify-center font-black text-indigo-600">
+                <div className="fixed inset-0 bg-white/80 z-[100] flex flex-col items-center justify-center font-black text-indigo-600 font-bold">
                   <i className="fas fa-circle-notch fa-spin text-6xl mb-4"></i>
-                  <span className="text-xl tracking-widest uppercase text-center px-4 font-bold">Syncing Cloud Database...</span>
+                  <span className="text-xl tracking-widest uppercase text-center px-4">Syncing Cloud Database...</span>
                 </div>
               )}
 
@@ -171,7 +169,7 @@
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400"><i className="fas fa-search"></i></div>
                     <input type="text" className="block w-full pl-11 pr-3 py-4 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-lg shadow-sm" placeholder="Search trauma, teens, virtual, notes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                   </div>
-                  <button onClick={() => { setCurrentGroup({groupName:"", therapist:"", email:"[Awaiting Response]", viewed:"false", status:"Pending", notes:"", phone:""}); setShowAddForm(true); }} className="px-6 py-4 bg-indigo-800 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-900 transition">+ NEW LEAD</button>
+                  <button onClick={() => { setCurrentGroup({groupName:"", therapist:"", email:"[Awaiting Response]", viewed:"false", status:"Pending", notes:"", phone:"", link:""}); setShowAddForm(true); }} className="px-6 py-4 bg-indigo-800 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-900 transition">+ NEW LEAD</button>
                 </div>
 
                 <div className="space-y-6">
@@ -183,7 +181,6 @@
                     return (
                       <div key={group.id} className={`bg-white rounded-2xl border-2 transition-all relative ${isNew ? 'priority-lead' : 'border-gray-200'} ${isContacted ? 'bg-emerald-50/30 border-emerald-100' : ''}`}>
                         
-                        {/* CLICK ZONE: Header only expands/collapses */}
                         <div className="p-6 cursor-pointer" onClick={() => { 
                             setExpandedId(isExpanded ? null : group.id); 
                             if(isNew) updateCloud({...group, viewed:"true"}); 
@@ -211,6 +208,14 @@
                                   <p><strong>Phone:</strong> {group.phone || "---"}</p>
                               </div>
 
+                              {group.link && (
+                                <div className="mt-2">
+                                    <a href={group.link.startsWith('http') ? group.link : `https://${group.link}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg font-bold text-sm hover:bg-indigo-100 transition shadow-sm">
+                                        <i className="fas fa-external-link-alt"></i> View Resource / Profile
+                                    </a>
+                                </div>
+                              )}
+
                               {group.notes && (
                                 <div className="bg-indigo-50 p-4 rounded-xl border-l-4 border-indigo-400">
                                     <p className="text-xs font-bold text-indigo-700 uppercase mb-1">Internal Notes:</p>
@@ -219,31 +224,22 @@
                               )}
 
                               <div className="bg-gray-50 p-4 rounded-xl space-y-4">
-                                  <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest text-center font-bold">Verification Outreach</h4>
-                                  
+                                  <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest text-center font-bold font-bold">Verification Outreach</h4>
                                   <div>
-                                      <label className="text-[10px] font-bold text-indigo-600 uppercase">Direct Email</label>
+                                      <label className="text-[10px] font-bold text-indigo-600 uppercase font-bold">Direct Email</label>
                                       <div className="flex gap-2">
                                           <input value={group.email} onChange={(e) => updateCloud({...group, email: e.target.value})} className="flex-1 bg-white border p-2 rounded text-sm font-bold" />
                                           <button onClick={() => handleCopy(group.email, 'email-'+group.id)} className="bg-indigo-100 text-indigo-700 px-3 rounded font-bold text-xs">{copiedType === 'email-'+group.id ? 'Copied!' : 'Copy'}</button>
                                       </div>
                                   </div>
-
                                   <div>
-                                      <label className="text-[10px] font-bold text-indigo-600 uppercase">Editable Message Body</label>
-                                      <textarea 
-                                        value={getEmailDraft(group)} 
-                                        onChange={(e) => setCustomMessages({...customMessages, [group.id]: e.target.value})}
-                                        className="w-full bg-white border p-3 rounded text-xs h-40 resize-y leading-relaxed outline-none focus:ring-2 focus:ring-indigo-300" 
-                                      />
+                                      <label className="text-[10px] font-bold text-indigo-600 uppercase font-bold">Editable Message Body</label>
+                                      <textarea value={getEmailDraft(group)} onChange={(e) => setCustomMessages({...customMessages, [group.id]: e.target.value})} className="w-full bg-white border p-3 rounded text-xs h-40 resize-y leading-relaxed outline-none focus:ring-2 focus:ring-indigo-300 font-medium" />
                                       <button onClick={() => handleCopy(getEmailDraft(group), 'msg-'+group.id)} className="w-full mt-2 bg-indigo-600 text-white py-2 rounded font-bold text-xs shadow-sm hover:bg-indigo-700 transition">
                                           {copiedType === 'msg-'+group.id ? 'Message Copied!' : 'Copy Message Draft'}
                                       </button>
                                   </div>
-
-                                  <button onClick={() => updateCloud({...group, lastContacted: formatTampaTime()})} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-emerald-700 transition">
-                                      Mark Outreach Sent & Saved
-                                  </button>
+                                  <button onClick={() => updateCloud({...group, lastContacted: formatTampaTime()})} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-emerald-700 transition">Mark Outreach Sent & Saved</button>
                               </div>
                             </div>
                           )}
@@ -257,10 +253,10 @@
               {deleteConfirm && (
                 <div className="fixed inset-0 bg-slate-900/80 z-[110] flex items-center justify-center p-4 backdrop-blur-sm">
                   <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl text-center">
-                    <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"><i className="fas fa-exclamation-triangle"></i></div>
-                    <h2 className="text-xl font-black text-slate-800 mb-2 font-bold">Confirm Delete</h2>
-                    <p className="text-sm text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Are you sure you want to permanently delete <span className="font-bold text-slate-800">"{deleteConfirm.groupName}"</span>? This cannot be undone.</p>
-                    <div className="flex gap-4">
+                    <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold"><i className="fas fa-exclamation-triangle"></i></div>
+                    <h2 className="text-xl font-black text-slate-800 mb-2 font-bold font-bold">Confirm Delete</h2>
+                    <p className="text-sm text-slate-500 mb-8 leading-relaxed font-bold">Are you sure you want to permanently delete <span className="font-bold text-slate-800 font-bold">"{deleteConfirm.groupName}"</span>? This cannot be undone.</p>
+                    <div className="flex gap-4 font-bold">
                         <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-3 font-bold text-slate-400 bg-slate-50 rounded-xl hover:bg-slate-100">Cancel</button>
                         <button onClick={handleDeleteFinal} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl shadow-lg hover:bg-red-700 transition">Yes, Delete</button>
                     </div>
@@ -272,19 +268,25 @@
                 <div className="fixed inset-0 bg-slate-900/60 z-[90] flex items-center justify-center p-4 backdrop-blur-sm">
                   <div className="bg-white p-8 rounded-3xl w-full max-w-lg shadow-2xl overflow-y-auto max-h-[90vh]">
                     <h2 className="text-xl font-black mb-6 uppercase text-indigo-900 font-bold">{showEditForm ? 'Edit Lead' : 'Add New Lead'}</h2>
-                    <form onSubmit={e => {e.preventDefault(); updateCloud(currentGroup, showEditForm ? 'edit' : 'add'); setShowAddForm(false); setShowEditForm(false);}} className="space-y-4">
-                        <input className="w-full p-4 bg-slate-50 rounded-xl shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="Group Name" value={currentGroup.groupName || ""} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} required />
-                        <input className="w-full p-4 bg-slate-50 rounded-xl shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="Therapist" value={currentGroup.therapist || ""} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} required />
-                        <input className="w-full p-4 border-2 border-indigo-100 rounded-xl font-bold text-indigo-700 outline-none" placeholder="Direct Email" value={currentGroup.email || ""} onChange={e => setCurrentGroup({...currentGroup, email:e.target.value})} />
-                        <input className="w-full p-4 bg-slate-50 rounded-xl shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="Direct Phone" value={currentGroup.phone || ""} onChange={e => setCurrentGroup({...currentGroup, phone:e.target.value})} />
+                    <form onSubmit={e => {e.preventDefault(); updateCloud(currentGroup, showEditForm ? 'edit' : 'add'); setShowAddForm(false); setShowEditForm(false);}} className="space-y-4 font-bold">
+                        <input className="w-full p-4 bg-slate-50 rounded-xl shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 font-medium font-bold" placeholder="Group Name" value={currentGroup.groupName || ""} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} required />
+                        <input className="w-full p-4 bg-slate-50 rounded-xl shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 font-medium font-bold" placeholder="Therapist" value={currentGroup.therapist || ""} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} required />
+                        <input className="w-full p-4 border-2 border-indigo-100 rounded-xl font-bold text-indigo-700 outline-none font-bold" placeholder="Direct Email" value={currentGroup.email || ""} onChange={e => setCurrentGroup({...currentGroup, email:e.target.value})} />
+                        
                         <div className="grid grid-cols-2 gap-4">
+                            <input className="p-4 bg-slate-50 rounded-xl shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 font-medium font-bold" placeholder="Direct Phone" value={currentGroup.phone || ""} onChange={e => setCurrentGroup({...currentGroup, phone:e.target.value})} />
+                            <input className="p-4 bg-slate-50 rounded-xl shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 font-medium font-bold" placeholder="URL Link (optional)" value={currentGroup.link || ""} onChange={e => setCurrentGroup({...currentGroup, link:e.target.value})} />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 font-bold">
                             <select className="p-4 bg-slate-50 rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={currentGroup.status || "Pending"} onChange={e => setCurrentGroup({...currentGroup, status:e.target.value})}><option>Pending</option><option>Verified</option></select>
                             <input className="p-4 bg-slate-50 rounded-xl shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="County" value={currentGroup.county || ""} onChange={e => setCurrentGroup({...currentGroup, county:e.target.value})} />
                         </div>
-                        <textarea className="w-full p-4 bg-slate-50 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="Internal Notes (Free, registration only, etc...)" value={currentGroup.notes || ""} onChange={e => setCurrentGroup({...currentGroup, notes:e.target.value})} rows="3" />
-                        <div className="flex gap-4 pt-4">
-                            <button type="button" onClick={() => {setShowAddForm(false); setShowEditForm(false);}} className="flex-1 font-bold text-slate-400">Cancel</button>
-                            <button type="submit" className="flex-1 bg-indigo-600 text-white p-4 rounded-xl font-bold shadow-lg">Save Lead</button>
+                        <textarea className="w-full p-4 bg-slate-50 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium font-bold" placeholder="Internal Notes (Free, registration only, etc...)" value={currentGroup.notes || ""} onChange={e => setCurrentGroup({...currentGroup, notes:e.target.value})} rows="3" />
+                        
+                        <div className="flex gap-4 pt-4 font-bold">
+                            <button type="button" onClick={() => {setShowAddForm(false); setShowEditForm(false);}} className="flex-1 font-bold text-slate-400 font-bold">Cancel</button>
+                            <button type="submit" className="flex-1 bg-indigo-600 text-white p-4 rounded-xl font-bold shadow-lg font-bold">Save Lead</button>
                         </div>
                     </form>
                   </div>
