@@ -32,6 +32,7 @@
 
         function App() {
           const CORRECT_PIN = "8069"; 
+          
           const [isAuthenticated, setIsAuthenticated] = useState(() => sessionStorage.getItem('tbta_auth') === 'true');
           const [pinInput, setPinInput] = useState("");
           const [data, setData] = useState([]);
@@ -39,6 +40,7 @@
           const [searchTerm, setSearchTerm] = useState("");
           const [showAddForm, setShowAddForm] = useState(false);
           const [showEditForm, setShowEditForm] = useState(false);
+          const [deleteConfirm, setDeleteConfirm] = useState(null); // Tracks lead to delete
           const [currentGroup, setCurrentGroup] = useState({});
           const [expandedId, setExpandedId] = useState(null);
           const [copiedType, setCopiedType] = useState(null);
@@ -72,6 +74,20 @@
               });
               await loadData();
             } catch (e) { alert("Sync Error"); }
+            setIsLoading(false);
+          };
+
+          const handleDeleteFinal = async () => {
+            const idToDelete = deleteConfirm.id;
+            setDeleteConfirm(null);
+            setIsLoading(true);
+            try {
+              await fetch(SCRIPT_URL, { 
+                method: "POST", 
+                body: JSON.stringify({ action: "delete", id: idToDelete }) 
+              });
+              await loadData();
+            } catch (e) { alert("Delete Error"); }
             setIsLoading(false);
           };
 
@@ -123,7 +139,7 @@
               {isLoading && (
                 <div className="fixed inset-0 bg-white/80 z-[100] flex flex-col items-center justify-center font-black text-indigo-600">
                   <i className="fas fa-circle-notch fa-spin text-6xl mb-4"></i>
-                  <span className="text-xl tracking-widest uppercase">Syncing Cloud Database...</span>
+                  <span className="text-xl tracking-widest uppercase text-center px-4">Syncing Cloud Database...</span>
                 </div>
               )}
 
@@ -169,7 +185,7 @@
                             </div>
                             <div className="flex gap-4">
                               <button onClick={(e) => {e.stopPropagation(); setCurrentGroup(group); setShowEditForm(true);}} className="text-gray-300 hover:text-indigo-600"><i className="fas fa-edit text-lg"></i></button>
-                              <button onClick={(e) => {e.stopPropagation(); if(confirm("Permanently delete this lead?")) updateCloud(group, "delete");}} className="text-gray-300 hover:text-red-500"><i className="fas fa-trash-alt text-lg"></i></button>
+                              <button onClick={(e) => {e.stopPropagation(); setDeleteConfirm(group);}} className="text-gray-300 hover:text-red-500"><i className="fas fa-trash-alt text-lg"></i></button>
                             </div>
                           </div>
 
@@ -183,7 +199,7 @@
                               </div>
 
                               <div className="bg-gray-50 p-4 rounded-xl space-y-4">
-                                  <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest text-center">Verification Outreach</h4>
+                                  <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest text-center font-bold">Verification Outreach</h4>
                                   <div>
                                       <label className="text-[10px] font-bold text-indigo-600 uppercase">Direct Email</label>
                                       <div className="flex gap-2">
@@ -207,7 +223,26 @@
                 </div>
               </main>
 
-              {/* MODAL FORM */}
+              {/* MODAL: DELETE CONFIRMATION (REPLACES BROWSER ALERT) */}
+              {deleteConfirm && (
+                <div className="fixed inset-0 bg-slate-900/80 z-[110] flex items-center justify-center p-4 backdrop-blur-sm">
+                  <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl text-center">
+                    <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                        <i className="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h2 className="text-xl font-black text-slate-800 mb-2">Confirm Delete</h2>
+                    <p className="text-sm text-slate-500 mb-8 leading-relaxed">
+                        Are you sure you want to permanently delete <span className="font-bold text-slate-800">"{deleteConfirm.groupName}"</span>? This cannot be undone.
+                    </p>
+                    <div className="flex gap-4">
+                        <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-3 font-bold text-slate-400 bg-slate-50 rounded-xl hover:bg-slate-100">Cancel</button>
+                        <button onClick={handleDeleteFinal} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl shadow-lg hover:bg-red-700">Yes, Delete</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* MODAL: ADD/EDIT FORM */}
               {(showAddForm || showEditForm) && (
                 <div className="fixed inset-0 bg-slate-900/60 z-[90] flex items-center justify-center p-4 backdrop-blur-sm">
                   <div className="bg-white p-8 rounded-3xl w-full max-w-lg shadow-2xl">
