@@ -94,7 +94,7 @@
           const handleLogout = () => {
             setIsAuthenticated(false);
             sessionStorage.removeItem('tbta_auth');
-            setPinInput(""); // THIS FIXES THE SECURITY ISSUE
+            setPinInput("");
           };
 
           const handleCopy = (text, type) => {
@@ -111,7 +111,8 @@
           const processedData = useMemo(() => {
             const filtered = data.filter(g => 
               (g.groupName || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
-              (g.therapist || "").toLowerCase().includes(searchTerm.toLowerCase())
+              (g.therapist || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+              (g.notes || "").toLowerCase().includes(searchTerm.toLowerCase())
             );
             return [...filtered].sort((a, b) => {
                 const aNew = !a.viewed || String(a.viewed).toLowerCase() === 'false';
@@ -167,9 +168,9 @@
                 <div className="flex flex-col sm:flex-row gap-4 mb-8">
                   <div className="relative flex-1">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400"><i className="fas fa-search"></i></div>
-                    <input type="text" className="block w-full pl-11 pr-3 py-4 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-lg shadow-sm" placeholder="Search trauma, teens, virtual..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                    <input type="text" className="block w-full pl-11 pr-3 py-4 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-lg shadow-sm" placeholder="Search trauma, teens, virtual, notes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                   </div>
-                  <button onClick={() => { setCurrentGroup({groupName:"", therapist:"", email:"[Awaiting Response]", viewed:"false", status:"Pending"}); setShowAddForm(true); }} className="px-6 py-4 bg-indigo-800 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-900">+ NEW LEAD</button>
+                  <button onClick={() => { setCurrentGroup({groupName:"", therapist:"", email:"[Awaiting Response]", viewed:"false", status:"Pending", notes:""}); setShowAddForm(true); }} className="px-6 py-4 bg-indigo-800 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-900">+ NEW LEAD</button>
                 </div>
 
                 <div className="space-y-6">
@@ -203,6 +204,13 @@
                                   <p><strong>Last Contact:</strong> {group.lastContacted || "Never"}</p>
                                   <p><strong>Phone:</strong> {group.phone || "---"}</p>
                               </div>
+                              
+                              {group.notes && (
+                                <div className="bg-indigo-50 p-4 rounded-xl border-l-4 border-indigo-400">
+                                    <p className="text-xs font-bold text-indigo-700 uppercase mb-1">Internal Notes:</p>
+                                    <p className="text-sm text-indigo-900 leading-relaxed font-medium">{group.notes}</p>
+                                </div>
+                              )}
 
                               <div className="bg-gray-50 p-4 rounded-xl space-y-4">
                                   <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest text-center font-bold">Verification Outreach</h4>
@@ -232,13 +240,9 @@
               {deleteConfirm && (
                 <div className="fixed inset-0 bg-slate-900/80 z-[110] flex items-center justify-center p-4 backdrop-blur-sm">
                   <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl text-center">
-                    <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-                        <i className="fas fa-exclamation-triangle"></i>
-                    </div>
+                    <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"><i className="fas fa-exclamation-triangle"></i></div>
                     <h2 className="text-xl font-black text-slate-800 mb-2">Confirm Delete</h2>
-                    <p className="text-sm text-slate-500 mb-8 leading-relaxed">
-                        Are you sure you want to permanently delete <span className="font-bold text-slate-800">"{deleteConfirm.groupName}"</span>? This cannot be undone.
-                    </p>
+                    <p className="text-sm text-slate-500 mb-8 leading-relaxed">Are you sure you want to permanently delete <span className="font-bold text-slate-800">"{deleteConfirm.groupName}"</span>? This cannot be undone.</p>
                     <div className="flex gap-4">
                         <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-3 font-bold text-slate-400 bg-slate-50 rounded-xl hover:bg-slate-100">Cancel</button>
                         <button onClick={handleDeleteFinal} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl shadow-lg hover:bg-red-700">Yes, Delete</button>
@@ -249,7 +253,7 @@
 
               {(showAddForm || showEditForm) && (
                 <div className="fixed inset-0 bg-slate-900/60 z-[90] flex items-center justify-center p-4 backdrop-blur-sm">
-                  <div className="bg-white p-8 rounded-3xl w-full max-w-lg shadow-2xl">
+                  <div className="bg-white p-8 rounded-3xl w-full max-w-lg shadow-2xl overflow-y-auto max-h-[90vh]">
                     <h2 className="text-xl font-black mb-6 uppercase text-indigo-900">{showEditForm ? 'Edit Lead' : 'Add New Lead'}</h2>
                     <form onSubmit={e => {e.preventDefault(); updateCloud(currentGroup, showEditForm ? 'edit' : 'add'); setShowAddForm(false); setShowEditForm(false);}} className="space-y-4">
                         <input className="w-full p-4 bg-slate-50 rounded-xl shadow-inner border-none outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Group Name" value={currentGroup.groupName || ""} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} required />
@@ -260,6 +264,7 @@
                             <select className="p-4 bg-slate-50 rounded-xl font-bold border-none outline-none focus:ring-2 focus:ring-indigo-500" value={currentGroup.status || "Pending"} onChange={e => setCurrentGroup({...currentGroup, status:e.target.value})}><option>Pending</option><option>Verified</option></select>
                             <input className="p-4 bg-slate-50 rounded-xl shadow-inner border-none outline-none focus:ring-2 focus:ring-indigo-500" placeholder="County" value={currentGroup.county || ""} onChange={e => setCurrentGroup({...currentGroup, county:e.target.value})} />
                         </div>
+                        <textarea className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Internal Notes (e.g. Free, no insurance needed...)" value={currentGroup.notes || ""} onChange={e => setCurrentGroup({...currentGroup, notes:e.target.value})} rows="3" />
                         <div className="flex gap-4 pt-4">
                             <button type="button" onClick={() => {setShowAddForm(false); setShowEditForm(false);}} className="flex-1 font-bold text-slate-400">Cancel</button>
                             <button type="submit" className="flex-1 bg-indigo-600 text-white p-4 rounded-xl font-bold shadow-lg">Save Lead</button>
