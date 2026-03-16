@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TBTA Central Referral Command</title>
+    <meta name="robots" content="noindex, nofollow">
+    <title>Tampa Bay Therapist Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -11,14 +12,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @keyframes glow {
-            0% { border-color: #6366f1; box-shadow: 0 0 5px #6366f1; }
-            50% { border-color: #a5b4fc; box-shadow: 0 0 20px #6366f1; }
-            100% { border-color: #6366f1; box-shadow: 0 0 5px #6366f1; }
+            0% { border-color: #6366f1; box-shadow: 0 0 5px rgba(99, 102, 241, 0.4); }
+            50% { border-color: #818cf8; box-shadow: 0 0 20px rgba(99, 102, 241, 0.8); }
+            100% { border-color: #6366f1; box-shadow: 0 0 5px rgba(99, 102, 241, 0.4); }
         }
-        .glowing-card { animation: glow 2s infinite; border-width: 3px !important; }
+        .glowing-card { animation: glow 2s infinite; border-width: 3px !important; z-index: 10; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
+<body class="bg-gray-50 text-gray-900 font-sans pb-20">
     <div id="root"></div>
 
     <script type="text/babel">
@@ -26,9 +27,11 @@
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbweycjLZOjcVxXnK_GyxkcAdAo3dCbFUz0ezNb35fzpfYb5kB108wY2SO9VZt2I4NMYRQ/exec";
 
         function App() {
-          const CORRECT_PIN = "8069";
+          const CORRECT_PIN = "8069"; // YOUR PIN
+          
           const [isAuthenticated, setIsAuthenticated] = useState(() => sessionStorage.getItem('tbta_auth') === 'true');
           const [pinInput, setPinInput] = useState("");
+          const [pinError, setPinError] = useState(false);
           const [data, setData] = useState([]);
           const [isLoading, setIsLoading] = useState(false);
           const [isSaving, setIsSaving] = useState(false);
@@ -43,35 +46,40 @@
               const response = await fetch(SCRIPT_URL);
               const result = await response.json();
               setData(result);
-            } catch (e) { console.error(e); }
+            } catch (error) { console.error(error); }
             setIsLoading(false);
           };
 
           useEffect(() => { if (isAuthenticated) loadData(); }, [isAuthenticated]);
 
+          const updateGroupInCloud = async (group, action = "edit") => {
+            setIsSaving(true);
+            try {
+                await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action, data: group }) });
+                await loadData();
+            } catch (e) { alert("Cloud sync failed."); }
+            setIsSaving(false);
+          };
+
           const sortedData = useMemo(() => {
             const filtered = data.filter(g => 
               (g.groupName || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
-              (g.therapist || "").toLowerCase().includes(lowerTerm) ||
+              (g.therapist || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
               (g.keywords || "").toLowerCase().includes(searchTerm.toLowerCase())
             );
-            // Sort: Unviewed first, then Pending, then Verified
+            
+            // SORTING LOGIC: viewed="false" always goes to the top
             return [...filtered].sort((a, b) => {
-                if (String(a.viewed) === 'false' && String(b.viewed) !== 'false') return -1;
-                if (String(a.viewed) !== 'false' && String(b.viewed) === 'false') return 1;
+                const aViewed = String(a.viewed).toLowerCase() === 'false';
+                const bViewed = String(b.viewed).toLowerCase() === 'false';
+                if (aViewed && !bViewed) return -1;
+                if (!aViewed && bViewed) return 1;
                 return 0;
             });
           }, [data, searchTerm]);
 
-          const updateGroupInCloud = async (group, action = "edit") => {
-            setIsSaving(true);
-            await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action, data: group }) });
-            await loadData();
-            setIsSaving(false);
-          };
-
           const handleMarkViewed = (group) => {
-            if (String(group.viewed) === 'false') {
+            if (String(group.viewed).toLowerCase() === 'false') {
                 updateGroupInCloud({ ...group, viewed: "true" });
             }
           };
@@ -81,87 +89,119 @@
             updateGroupInCloud({ ...group, lastContacted: date });
           };
 
+          const handleLogin = (e) => {
+            e.preventDefault();
+            if (pinInput === CORRECT_PIN) {
+              setIsAuthenticated(true);
+              sessionStorage.setItem('tbta_auth', 'true');
+            } else {
+              setPinError(true);
+              setPinInput("");
+            }
+          };
+
           if (!isAuthenticated) {
             return (
-              <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
-                <form onSubmit={(e) => { e.preventDefault(); if(pinInput === CORRECT_PIN) { setIsAuthenticated(true); sessionStorage.setItem('tbta_auth', 'true'); } }} className="bg-white p-8 rounded shadow-xl w-full max-w-sm">
-                  <h2 className="text-center font-bold mb-4 text-indigo-800">TBTA Security</h2>
-                  <input type="password" value={pinInput} onChange={e => setPinInput(e.target.value)} className="w-full p-3 border rounded text-center text-2xl" placeholder="••••" maxLength="4" autoFocus />
-                  <button className="w-full bg-indigo-600 text-white p-3 rounded mt-4 font-bold">Access System</button>
-                </form>
+              <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+                <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full border-t-4 border-indigo-600">
+                  <div className="text-center mb-6">
+                    <i className="fas fa-lock text-4xl text-indigo-600 mb-3"></i>
+                    <h2 className="text-2xl font-bold text-gray-800">Secure Access</h2>
+                    <p className="text-gray-500 text-sm mt-1">Tampa Bay Therapist & Associates</p>
+                  </div>
+                  <form onSubmit={handleLogin} className="space-y-6">
+                    <input type="password" maxLength="4" autoFocus value={pinInput} onChange={e => setPinInput(e.target.value)} className={`w-full px-4 py-3 text-center text-2xl tracking-[0.5em] border rounded-lg focus:outline-none focus:ring-2 ${pinError ? 'border-red-500' : 'border-gray-300'}`} placeholder="••••" />
+                    <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition duration-200 font-bold">Access Dashboard</button>
+                  </form>
+                </div>
               </div>
             );
           }
 
           return (
-            <div className="max-w-5xl mx-auto p-4 sm:p-8">
-              {isSaving && <div className="fixed inset-0 bg-white/60 z-50 flex items-center justify-center font-black text-indigo-600">CLOUD SYNC IN PROGRESS...</div>}
-              
-              <div className="flex justify-between items-center mb-8">
-                <h1 className="text-2xl font-black text-indigo-900">REFERRAL TRIAGE</h1>
-                <button onClick={() => { setCurrentGroup({groupName:"", therapist:"", county:"Pinellas", email:"[Awaiting Response]", status:"Pending", viewed:"false"}); setShowAddForm(true); }} className="bg-indigo-600 text-white px-6 py-3 rounded-full font-bold shadow-lg hover:bg-indigo-700">+ NEW LEAD</button>
-              </div>
+            <div className="relative min-h-screen">
+              {isSaving && <div className="fixed inset-0 bg-white/80 z-50 flex flex-col items-center justify-center font-black text-indigo-600"><i className="fas fa-sync fa-spin text-4xl mb-2"></i>SYNCING CLOUD DATABASE...</div>}
 
-              <input type="text" placeholder="Search trauma, teens, Spanish..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-5 border-2 border-indigo-100 rounded-2xl shadow-inner mb-8 text-lg focus:border-indigo-500 outline-none" />
+              <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-20">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+                  <div>
+                    <h1 className="text-2xl font-bold text-indigo-800 flex items-center gap-2">
+                        <i className="fas fa-users text-indigo-600"></i> Tampa Bay Therapist & Associates
+                    </h1>
+                    <p className="text-sm text-gray-500 font-medium flex items-center gap-2">
+                      Referral Triage <span className="text-green-500 text-xs font-bold"><i className="fas fa-circle animate-pulse"></i> Sync: Live</span>
+                    </p>
+                  </div>
+                  <button onClick={() => {setIsAuthenticated(false); sessionStorage.clear();}} className="text-sm text-gray-400 hover:text-red-600 font-bold"><i className="fas fa-sign-out-alt mr-1"></i> Lock</button>
+                </div>
+              </header>
 
-              <div className="grid gap-6">
-                {sortedData.map(group => {
-                  const isNew = String(group.viewed) === 'false';
-                  const contacted = !!group.lastContacted;
+              <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+                <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400"><i className="fas fa-search"></i></div>
+                    <input type="text" className="block w-full pl-11 pr-3 py-4 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-lg shadow-sm" placeholder="Search trauma, teens, Spanish..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                  </div>
+                  <button onClick={() => { setCurrentGroup({groupName:"", therapist:"", county:"Pinellas", email:"[Awaiting Response]", status:"Pending", viewed:"false"}); setShowAddForm(true); }} className="px-6 py-4 bg-indigo-800 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-900 transition-colors">+ NEW LEAD</button>
+                </div>
 
-                  return (
-                    <div 
-                        key={group.id} 
-                        onClick={() => handleMarkViewed(group)}
-                        className={`bg-white p-6 rounded-2xl border-2 transition-all cursor-pointer relative ${isNew ? 'glowing-card' : 'border-slate-200'} ${contacted ? 'bg-emerald-50/50' : ''}`}
-                    >
-                      <div className="flex flex-col sm:flex-row justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                             {isNew && <span className="bg-indigo-600 text-white text-[10px] px-2 py-1 rounded-full font-black animate-pulse">NEW LEAD</span>}
-                             <h3 className="text-xl font-black text-slate-800">{group.groupName}</h3>
+                {isLoading ? (
+                  <div className="text-center p-20"><i className="fas fa-spinner fa-spin text-5xl text-indigo-300 mb-4"></i><h3 className="font-bold text-gray-400">Loading Database...</h3></div>
+                ) : (
+                  <div className="space-y-6">
+                    {sortedData.map(group => {
+                      const isNew = String(group.viewed).toLowerCase() === 'false';
+                      const contacted = !!group.lastContacted;
+                      return (
+                        <div key={group.id} onClick={() => handleMarkViewed(group)} className={`bg-white p-6 rounded-2xl border-2 transition-all cursor-pointer relative ${isNew ? 'glowing-card border-indigo-400' : 'border-gray-200 hover:border-indigo-300'} ${contacted ? 'bg-emerald-50/30' : ''}`}>
+                          <div className="absolute top-4 right-4 flex gap-4 z-10">
+                            <button onClick={(e) => {e.stopPropagation(); setCurrentGroup(group); setShowEditForm(true);}} className="text-gray-300 hover:text-indigo-600 transition-colors"><i className="fas fa-edit text-lg"></i></button>
+                            <button onClick={(e) => {e.stopPropagation(); if(confirm("Delete?")) updateGroupInCloud(group, "delete");}} className="text-gray-300 hover:text-red-500 transition-colors"><i className="fas fa-trash-alt text-lg"></i></button>
                           </div>
-                          <p className="font-bold text-indigo-600 mb-4">{group.therapist}</p>
                           
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-slate-500">
-                             <p><i className="fas fa-envelope mr-2"></i>{group.email}</p>
-                             <p><i className="fas fa-map-marker-alt mr-2"></i>{group.county}</p>
-                             <p><i className="fas fa-info-circle mr-2"></i>Status: <span className="font-bold text-slate-800">{group.status}</span></p>
+                          <div className="pr-16">
+                            <div className="flex items-center gap-3 mb-1">
+                                {isNew && <span className="bg-indigo-600 text-white text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-wider">New Scraped Lead</span>}
+                                <h3 className="text-xl font-bold text-gray-900">{group.groupName}</h3>
+                            </div>
+                            <p className="text-indigo-600 font-bold">{group.therapist}</p>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 mt-4 text-sm text-gray-500">
+                                <p><i className="fas fa-map-marker-alt mr-2 w-4 text-center"></i>{group.county}</p>
+                                <p className={group.email === "[Awaiting Response]" ? "text-amber-600 font-bold" : ""}><i className="fas fa-envelope mr-2 w-4 text-center"></i>{group.email}</p>
+                                <p><i className="fas fa-info-circle mr-2 w-4 text-center"></i>Status: <span className="font-bold text-gray-800 uppercase">{group.status}</span></p>
+                                {group.lastContacted && <p className="text-emerald-600 font-bold"><i className="fas fa-check-double mr-2 w-4 text-center"></i>Outreach: {group.lastContacted}</p>}
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="flex sm:flex-col justify-end gap-2 border-t sm:border-t-0 pt-4 sm:pt-0">
-                           <button 
-                             onClick={(e) => { e.stopPropagation(); handleToggleOutreach(group); }} 
-                             className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-all ${contacted ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-indigo-100'}`}
-                           >
-                             <i className={`fas ${contacted ? 'fa-check-double' : 'fa-paper-plane'}`}></i>
-                             {contacted ? `Outreach Sent (${group.lastContacted})` : 'Mark Outreach Sent'}
-                           </button>
-                           <button onClick={(e) => { e.stopPropagation(); setCurrentGroup(group); setShowEditForm(true); }} className="p-2 text-slate-400 hover:text-indigo-600 text-center"><i className="fas fa-edit mr-2"></i>Edit Full Info</button>
+                          {!contacted && (
+                            <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
+                                <button onClick={(e) => {e.stopPropagation(); handleToggleOutreach(group);}} className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg font-bold text-xs hover:bg-indigo-100 transition-colors"><i className="fas fa-paper-plane mr-2"></i> MARK OUTREACH SENT</button>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </main>
 
-              {/* FORMS REMAIN SAME AS BEFORE BUT WITH ALL FIELDS */}
+              {/* FORM MODAL */}
               {(showAddForm || showEditForm) && (
-                <div className="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
                   <div className="bg-white p-8 rounded-3xl w-full max-w-xl shadow-2xl">
-                    <h2 className="text-2xl font-black mb-6">{showEditForm ? 'Edit Lead' : 'Add Lead'}</h2>
-                    <form onSubmit={e => handleSaveSubmit(e, showEditForm ? 'edit' : 'add')} className="space-y-4">
-                        <input className="w-full p-3 border rounded-xl" placeholder="Group Name" value={currentGroup.groupName} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} />
-                        <input className="w-full p-3 border rounded-xl" placeholder="Therapist" value={currentGroup.therapist} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} />
-                        <input className="w-full p-3 border-2 border-indigo-200 rounded-xl" placeholder="Email" value={currentGroup.email} onChange={e => setCurrentGroup({...currentGroup, email:e.target.value})} />
+                    <h2 className="text-2xl font-black mb-6 text-indigo-900">{showEditForm ? 'Edit Group Info' : 'Add New Lead'}</h2>
+                    <form onSubmit={e => {e.preventDefault(); handleSaveSubmit(e, showEditForm ? 'edit' : 'add');}} className="space-y-4">
+                        <div><label className="text-xs font-bold text-gray-400 uppercase">Group Name</label><input required className="w-full p-3 border border-gray-200 rounded-xl" value={currentGroup.groupName} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} /></div>
+                        <div><label className="text-xs font-bold text-gray-400 uppercase">Therapist</label><input required className="w-full p-3 border border-gray-200 rounded-xl" value={currentGroup.therapist} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} /></div>
+                        <div><label className="text-xs font-bold text-indigo-600 uppercase">Email (Update when replied)</label><input className="w-full p-3 border-2 border-indigo-100 rounded-xl" value={currentGroup.email} onChange={e => setCurrentGroup({...currentGroup, email:e.target.value})} /></div>
                         <div className="grid grid-cols-2 gap-4">
-                            <select className="p-3 border rounded-xl" value={currentGroup.status} onChange={e => setCurrentGroup({...currentGroup, status:e.target.value})}><option>Pending</option><option>Verified</option></select>
-                            <input className="p-3 border rounded-xl" placeholder="County" value={currentGroup.county} onChange={e => setCurrentGroup({...currentGroup, county:e.target.value})} />
+                            <div><label className="text-xs font-bold text-gray-400 uppercase">Status</label><select className="w-full p-3 border border-gray-200 rounded-xl bg-white" value={currentGroup.status} onChange={e => setCurrentGroup({...currentGroup, status:e.target.value})}><option>Pending</option><option>Verified</option></select></div>
+                            <div><label className="text-xs font-bold text-gray-400 uppercase">County</label><input className="w-full p-3 border border-gray-200 rounded-xl" value={currentGroup.county} onChange={e => setCurrentGroup({...currentGroup, county:e.target.value})} /></div>
                         </div>
                         <div className="flex gap-4 pt-6">
-                            <button type="button" onClick={() => {setShowAddForm(false); setShowEditForm(false);}} className="flex-1 p-3 font-bold text-slate-400">Cancel</button>
-                            <button className="flex-1 bg-indigo-600 text-white p-3 rounded-xl font-bold">Save Changes</button>
+                            <button type="button" onClick={() => {setShowAddForm(false); setShowEditForm(false);}} className="flex-1 p-3 font-bold text-gray-400 hover:text-gray-600">Cancel</button>
+                            <button type="submit" className="flex-1 bg-indigo-600 text-white p-3 rounded-xl font-bold shadow-lg hover:bg-indigo-700">Save to Cloud</button>
                         </div>
                     </form>
                   </div>
