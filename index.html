@@ -56,12 +56,17 @@
 
           useEffect(() => { if (isAuthenticated) loadData(); }, [isAuthenticated]);
 
-          const formatCurrentDate = () => {
-            const now = new Date();
-            const options = { month: 'long', day: 'numeric', year: 'numeric' };
-            const dateStr = now.toLocaleDateString('en-US', options);
-            const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-            return `${dateStr} at ${timeStr}`;
+          // --- FIXED TAMPA TIME FORMATTING ---
+          const formatTampaTime = () => {
+            return new Intl.DateTimeFormat('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true,
+              timeZone: 'America/New_York'
+            }).format(new Date()).replace(',', '') + ' ET';
           };
 
           const updateCloud = async (group, action = "edit") => {
@@ -121,7 +126,7 @@
               {isLoading && (
                 <div className="fixed inset-0 bg-white/80 z-[100] flex flex-col items-center justify-center font-black text-indigo-600">
                   <i className="fas fa-circle-notch fa-spin text-6xl mb-4"></i>
-                  <span className="text-xl tracking-widest uppercase">Syncing Cloud Database...</span>
+                  <span className="text-xl tracking-widest uppercase text-center px-4">Syncing Cloud Database...</span>
                 </div>
               )}
 
@@ -181,7 +186,7 @@
                               </div>
 
                               <div className="bg-gray-50 p-4 rounded-xl space-y-4">
-                                  <h4 className="text-xs font-black uppercase text-gray-400">Outreach Verification Draft</h4>
+                                  <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest">Outreach Verification Draft</h4>
                                   <div>
                                       <label className="text-[10px] font-bold text-indigo-600 uppercase">Direct Email</label>
                                       <div className="flex gap-2">
@@ -194,7 +199,7 @@
                                       <textarea readOnly value={getEmailDraft(group)} className="w-full bg-white border p-2 rounded text-xs h-32 resize-none leading-relaxed" />
                                       <button onClick={(e) => {e.stopPropagation(); handleCopy(getEmailDraft(group), 'msg-'+group.id);}} className="w-full mt-2 bg-indigo-600 text-white py-2 rounded font-bold text-xs">{copiedType === 'msg-'+group.id ? 'Message Copied!' : 'Copy Message Draft'}</button>
                                   </div>
-                                  <button onClick={(e) => {e.stopPropagation(); updateCloud({...group, lastContacted: formatCurrentDate()}); }} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-emerald-700 transition">Mark Outreach Sent & Saved</button>
+                                  <button onClick={(e) => {e.stopPropagation(); updateCloud({...group, lastContacted: formatTampaTime()}); }} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-emerald-700 transition">Mark Outreach Sent & Saved</button>
                               </div>
                             </div>
                           )}
@@ -211,8 +216,8 @@
                   <div className="bg-white p-8 rounded-3xl w-full max-w-lg shadow-2xl">
                     <h2 className="text-xl font-black mb-6 uppercase text-indigo-900">{showEditForm ? 'Update Details' : 'Manual Entry'}</h2>
                     <form onSubmit={e => {e.preventDefault(); updateCloud(currentGroup, showEditForm ? 'edit' : 'add'); setShowAddForm(false); setShowEditForm(false);}} className="space-y-4">
-                        <input className="w-full p-4 bg-slate-50 rounded-xl" placeholder="Group Name" value={currentGroup.groupName || ""} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} required />
-                        <input className="w-full p-4 bg-slate-50 rounded-xl" placeholder="Therapist" value={currentGroup.therapist || ""} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} required />
+                        <input className="w-full p-4 bg-slate-50 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Group Name" value={currentGroup.groupName || ""} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} required />
+                        <input className="w-full p-4 bg-slate-50 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Therapist" value={currentGroup.therapist || ""} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} required />
                         <input className="w-full p-4 border-2 border-indigo-100 rounded-xl font-bold text-indigo-700" placeholder="Email" value={currentGroup.email || ""} onChange={e => setCurrentGroup({...currentGroup, email:e.target.value})} />
                         <input className="w-full p-4 bg-slate-50 rounded-xl" placeholder="Phone" value={currentGroup.phone || ""} onChange={e => setCurrentGroup({...currentGroup, phone:e.target.value})} />
                         <div className="grid grid-cols-2 gap-4">
