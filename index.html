@@ -82,10 +82,7 @@
             setDeleteConfirm(null);
             setIsLoading(true);
             try {
-              await fetch(SCRIPT_URL, { 
-                method: "POST", 
-                body: JSON.stringify({ action: "delete", id: idToDelete }) 
-              });
+              await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "delete", id: idToDelete }) });
               await loadData();
             } catch (e) { alert("Delete Error"); }
             setIsLoading(false);
@@ -103,7 +100,11 @@
             setTimeout(() => setCopiedType(null), 2000);
           };
 
+          // We use a state to track custom message edits so it doesn't revert while typing
+          const [customMessages, setCustomMessages] = useState({});
+
           const getEmailDraft = (g) => {
+            if (customMessages[g.id]) return customMessages[g.id];
             const firstName = g.therapist ? g.therapist.split(' ')[0] : "Provider";
             return `Hello ${firstName},\n\nMy name is Marvin, I am a local mental health therapist working for Tampa Bay Therapist and Associates.\n\nI am looking to inquire about your group: ${g.groupName}. Are you currently accepting new clients for referrals to this group?\n\nCould you also please confirm if this is an open or closed group, and if there are any updates to your schedule or fees?\n\nThank you,\nMarvin`;
           };
@@ -146,7 +147,7 @@
               {isLoading && (
                 <div className="fixed inset-0 bg-white/80 z-[100] flex flex-col items-center justify-center font-black text-indigo-600">
                   <i className="fas fa-circle-notch fa-spin text-6xl mb-4"></i>
-                  <span className="text-xl tracking-widest uppercase text-center px-4">Syncing Cloud Database...</span>
+                  <span className="text-xl tracking-widest uppercase text-center px-4 font-bold">Syncing Cloud Database...</span>
                 </div>
               )}
 
@@ -170,7 +171,7 @@
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400"><i className="fas fa-search"></i></div>
                     <input type="text" className="block w-full pl-11 pr-3 py-4 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-lg shadow-sm" placeholder="Search trauma, teens, virtual, notes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                   </div>
-                  <button onClick={() => { setCurrentGroup({groupName:"", therapist:"", email:"[Awaiting Response]", viewed:"false", status:"Pending", notes:"", phone:""}); setShowAddForm(true); }} className="px-6 py-4 bg-indigo-800 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-900">+ NEW LEAD</button>
+                  <button onClick={() => { setCurrentGroup({groupName:"", therapist:"", email:"[Awaiting Response]", viewed:"false", status:"Pending", notes:"", phone:""}); setShowAddForm(true); }} className="px-6 py-4 bg-indigo-800 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-900 transition">+ NEW LEAD</button>
                 </div>
 
                 <div className="space-y-6">
@@ -181,7 +182,12 @@
 
                     return (
                       <div key={group.id} className={`bg-white rounded-2xl border-2 transition-all relative ${isNew ? 'priority-lead' : 'border-gray-200'} ${isContacted ? 'bg-emerald-50/30 border-emerald-100' : ''}`}>
-                        <div className="p-6 cursor-pointer" onClick={() => { setExpandedId(isExpanded ? null : group.id); if(isNew) updateCloud({...group, viewed:"true"}); }}>
+                        
+                        {/* CLICK ZONE: Header only expands/collapses */}
+                        <div className="p-6 cursor-pointer" onClick={() => { 
+                            setExpandedId(isExpanded ? null : group.id); 
+                            if(isNew) updateCloud({...group, viewed:"true"}); 
+                        }}>
                           <div className="flex justify-between items-start pr-12">
                             <div>
                               <div className="flex items-center gap-2 mb-1">
@@ -197,7 +203,7 @@
                           </div>
 
                           {isExpanded && (
-                            <div className="mt-6 pt-6 border-t border-gray-100 space-y-6">
+                            <div className="mt-6 pt-6 border-t border-gray-100 space-y-6" onClick={(e) => e.stopPropagation()}>
                               <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
                                   <p><strong>County:</strong> {group.county}</p>
                                   <p><strong>Status:</strong> {group.status}</p>
@@ -214,19 +220,30 @@
 
                               <div className="bg-gray-50 p-4 rounded-xl space-y-4">
                                   <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest text-center font-bold">Verification Outreach</h4>
+                                  
                                   <div>
                                       <label className="text-[10px] font-bold text-indigo-600 uppercase">Direct Email</label>
                                       <div className="flex gap-2">
-                                          <input readOnly value={group.email} className="flex-1 bg-white border p-2 rounded text-sm font-bold" />
-                                          <button onClick={(e) => {e.stopPropagation(); handleCopy(group.email, 'email-'+group.id);}} className="bg-indigo-100 text-indigo-700 px-3 rounded font-bold text-xs">{copiedType === 'email-'+group.id ? 'Copied!' : 'Copy'}</button>
+                                          <input value={group.email} onChange={(e) => updateCloud({...group, email: e.target.value})} className="flex-1 bg-white border p-2 rounded text-sm font-bold" />
+                                          <button onClick={() => handleCopy(group.email, 'email-'+group.id)} className="bg-indigo-100 text-indigo-700 px-3 rounded font-bold text-xs">{copiedType === 'email-'+group.id ? 'Copied!' : 'Copy'}</button>
                                       </div>
                                   </div>
+
                                   <div>
-                                      <label className="text-[10px] font-bold text-indigo-600 uppercase">Message Body</label>
-                                      <textarea readOnly value={getEmailDraft(group)} className="w-full bg-white border p-2 rounded text-xs h-32 resize-none leading-relaxed" />
-                                      <button onClick={(e) => {e.stopPropagation(); handleCopy(getEmailDraft(group), 'msg-'+group.id);}} className="w-full mt-2 bg-indigo-600 text-white py-2 rounded font-bold text-xs">{copiedType === 'msg-'+group.id ? 'Draft Copied!' : 'Copy Message Draft'}</button>
+                                      <label className="text-[10px] font-bold text-indigo-600 uppercase">Editable Message Body</label>
+                                      <textarea 
+                                        value={getEmailDraft(group)} 
+                                        onChange={(e) => setCustomMessages({...customMessages, [group.id]: e.target.value})}
+                                        className="w-full bg-white border p-3 rounded text-xs h-40 resize-y leading-relaxed outline-none focus:ring-2 focus:ring-indigo-300" 
+                                      />
+                                      <button onClick={() => handleCopy(getEmailDraft(group), 'msg-'+group.id)} className="w-full mt-2 bg-indigo-600 text-white py-2 rounded font-bold text-xs shadow-sm hover:bg-indigo-700 transition">
+                                          {copiedType === 'msg-'+group.id ? 'Message Copied!' : 'Copy Message Draft'}
+                                      </button>
                                   </div>
-                                  <button onClick={(e) => {e.stopPropagation(); updateCloud({...group, lastContacted: formatTampaTime()}); }} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-emerald-700 transition">Mark Outreach Sent & Saved</button>
+
+                                  <button onClick={() => updateCloud({...group, lastContacted: formatTampaTime()})} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-emerald-700 transition">
+                                      Mark Outreach Sent & Saved
+                                  </button>
                               </div>
                             </div>
                           )}
@@ -241,11 +258,11 @@
                 <div className="fixed inset-0 bg-slate-900/80 z-[110] flex items-center justify-center p-4 backdrop-blur-sm">
                   <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl text-center">
                     <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"><i className="fas fa-exclamation-triangle"></i></div>
-                    <h2 className="text-xl font-black text-slate-800 mb-2">Confirm Delete</h2>
-                    <p className="text-sm text-slate-500 mb-8 leading-relaxed">Are you sure you want to permanently delete <span className="font-bold text-slate-800">"{deleteConfirm.groupName}"</span>? This cannot be undone.</p>
+                    <h2 className="text-xl font-black text-slate-800 mb-2 font-bold">Confirm Delete</h2>
+                    <p className="text-sm text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Are you sure you want to permanently delete <span className="font-bold text-slate-800">"{deleteConfirm.groupName}"</span>? This cannot be undone.</p>
                     <div className="flex gap-4">
                         <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-3 font-bold text-slate-400 bg-slate-50 rounded-xl hover:bg-slate-100">Cancel</button>
-                        <button onClick={handleDeleteFinal} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl shadow-lg hover:bg-red-700">Yes, Delete</button>
+                        <button onClick={handleDeleteFinal} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl shadow-lg hover:bg-red-700 transition">Yes, Delete</button>
                     </div>
                   </div>
                 </div>
@@ -254,17 +271,17 @@
               {(showAddForm || showEditForm) && (
                 <div className="fixed inset-0 bg-slate-900/60 z-[90] flex items-center justify-center p-4 backdrop-blur-sm">
                   <div className="bg-white p-8 rounded-3xl w-full max-w-lg shadow-2xl overflow-y-auto max-h-[90vh]">
-                    <h2 className="text-xl font-black mb-6 uppercase text-indigo-900">{showEditForm ? 'Edit Lead' : 'Add New Lead'}</h2>
+                    <h2 className="text-xl font-black mb-6 uppercase text-indigo-900 font-bold">{showEditForm ? 'Edit Lead' : 'Add New Lead'}</h2>
                     <form onSubmit={e => {e.preventDefault(); updateCloud(currentGroup, showEditForm ? 'edit' : 'add'); setShowAddForm(false); setShowEditForm(false);}} className="space-y-4">
-                        <input className="w-full p-4 bg-slate-50 rounded-xl shadow-inner border-none outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Group Name" value={currentGroup.groupName || ""} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} required />
-                        <input className="w-full p-4 bg-slate-50 rounded-xl shadow-inner border-none outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Therapist" value={currentGroup.therapist || ""} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} required />
+                        <input className="w-full p-4 bg-slate-50 rounded-xl shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="Group Name" value={currentGroup.groupName || ""} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} required />
+                        <input className="w-full p-4 bg-slate-50 rounded-xl shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="Therapist" value={currentGroup.therapist || ""} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} required />
                         <input className="w-full p-4 border-2 border-indigo-100 rounded-xl font-bold text-indigo-700 outline-none" placeholder="Direct Email" value={currentGroup.email || ""} onChange={e => setCurrentGroup({...currentGroup, email:e.target.value})} />
-                        <input className="w-full p-4 bg-slate-50 rounded-xl shadow-inner border-none outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Direct Phone" value={currentGroup.phone || ""} onChange={e => setCurrentGroup({...currentGroup, phone:e.target.value})} />
+                        <input className="w-full p-4 bg-slate-50 rounded-xl shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="Direct Phone" value={currentGroup.phone || ""} onChange={e => setCurrentGroup({...currentGroup, phone:e.target.value})} />
                         <div className="grid grid-cols-2 gap-4">
-                            <select className="p-4 bg-slate-50 rounded-xl font-bold border-none outline-none focus:ring-2 focus:ring-indigo-500" value={currentGroup.status || "Pending"} onChange={e => setCurrentGroup({...currentGroup, status:e.target.value})}><option>Pending</option><option>Verified</option></select>
-                            <input className="p-4 bg-slate-50 rounded-xl shadow-inner border-none outline-none focus:ring-2 focus:ring-indigo-500" placeholder="County" value={currentGroup.county || ""} onChange={e => setCurrentGroup({...currentGroup, county:e.target.value})} />
+                            <select className="p-4 bg-slate-50 rounded-xl font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={currentGroup.status || "Pending"} onChange={e => setCurrentGroup({...currentGroup, status:e.target.value})}><option>Pending</option><option>Verified</option></select>
+                            <input className="p-4 bg-slate-50 rounded-xl shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="County" value={currentGroup.county || ""} onChange={e => setCurrentGroup({...currentGroup, county:e.target.value})} />
                         </div>
-                        <textarea className="w-full p-4 bg-slate-50 rounded-xl border-none outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Internal Notes (e.g. Free, no insurance needed...)" value={currentGroup.notes || ""} onChange={e => setCurrentGroup({...currentGroup, notes:e.target.value})} rows="3" />
+                        <textarea className="w-full p-4 bg-slate-50 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="Internal Notes (Free, registration only, etc...)" value={currentGroup.notes || ""} onChange={e => setCurrentGroup({...currentGroup, notes:e.target.value})} rows="3" />
                         <div className="flex gap-4 pt-4">
                             <button type="button" onClick={() => {setShowAddForm(false); setShowEditForm(false);}} className="flex-1 font-bold text-slate-400">Cancel</button>
                             <button type="submit" className="flex-1 bg-indigo-600 text-white p-4 rounded-xl font-bold shadow-lg">Save Lead</button>
