@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>TBTA Command Center</title>
+    <title>Tampa Bay Therapist Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -92,12 +92,16 @@
 
           if (!isAuthenticated) {
             return (
-              <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
-                <div className="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full border-t-8 border-indigo-600">
-                  <h2 className="text-2xl font-black text-center mb-6">TBTA SECURITY</h2>
-                  <form onSubmit={(e) => { e.preventDefault(); if(pinInput === CORRECT_PIN) { setIsAuthenticated(true); sessionStorage.setItem('tbta_auth', 'true'); } }} className="space-y-4">
-                    <input type="password" maxLength="4" autoFocus value={pinInput} onChange={e => setPinInput(e.target.value)} className="w-full p-4 text-center text-3xl tracking-widest border rounded-xl" placeholder="••••" />
-                    <button className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl">LOGIN</button>
+              <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+                <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full border-t-4 border-indigo-600">
+                  <div className="text-center mb-6">
+                    <i className="fas fa-lock text-4xl text-indigo-600 mb-3"></i>
+                    <h2 className="text-2xl font-bold text-gray-800">Secure Access</h2>
+                    <p className="text-gray-500 text-sm mt-1">Tampa Bay Therapist & Associates</p>
+                  </div>
+                  <form onSubmit={(e) => { e.preventDefault(); if(pinInput === CORRECT_PIN) { setIsAuthenticated(true); sessionStorage.setItem('tbta_auth', 'true'); } }} className="space-y-6">
+                    <input type="password" maxLength="4" autoFocus value={pinInput} onChange={e => setPinInput(e.target.value)} className="w-full p-4 text-center text-3xl tracking-widest border rounded-lg focus:border-indigo-500 outline-none" placeholder="••••" />
+                    <button className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition duration-200">Access Dashboard</button>
                   </form>
                 </div>
               </div>
@@ -105,97 +109,112 @@
           }
 
           return (
-            <div className="max-w-4xl mx-auto p-4 sm:p-8">
+            <div className="relative min-h-screen">
+              {/* LOADING OVERLAY WITH MESSAGE */}
               {isLoading && (
                 <div className="fixed inset-0 bg-white/80 z-[100] flex flex-col items-center justify-center font-black text-indigo-600">
                   <i className="fas fa-circle-notch fa-spin text-6xl mb-4"></i>
-                  <span>SYNCING...</span>
+                  <span className="text-xl tracking-widest uppercase">Syncing Cloud Database...</span>
                 </div>
               )}
-              
-              <div className="flex justify-between items-center mb-8">
-                <div>
-                  <h1 className="text-2xl font-black text-indigo-900 uppercase">Tampa Bay Therapist & Associates</h1>
-                  <p className="text-sm font-bold text-slate-400">Referral Triage ● Sync: Live</p>
+
+              <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-20">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+                  <div>
+                    <h1 className="text-2xl font-bold text-indigo-800 flex items-center gap-2">
+                        <i className="fas fa-users text-indigo-600"></i> Tampa Bay Therapist & Associates
+                    </h1>
+                    <p className="text-sm text-gray-500 font-medium flex items-center gap-2">
+                      Referral Triage <span className="text-green-500 text-xs font-bold"><i className="fas fa-circle animate-pulse"></i> Sync: Live</span>
+                    </p>
+                  </div>
+                  <button onClick={() => {setIsAuthenticated(false); sessionStorage.clear();}} className="text-sm text-gray-400 hover:text-red-600 font-bold"><i className="fas fa-sign-out-alt mr-1"></i> Lock</button>
                 </div>
-                <button onClick={() => { setCurrentGroup({groupName:"", therapist:"", email:"[Awaiting Response]", viewed:"false", status:"Pending"}); setShowAddForm(true); }} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg">+ NEW LEAD</button>
-              </div>
+              </header>
 
-              <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-5 border-2 border-white rounded-2xl shadow-sm mb-10 text-lg outline-none focus:border-indigo-400" />
+              <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+                <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400"><i className="fas fa-search"></i></div>
+                    <input type="text" className="block w-full pl-11 pr-3 py-4 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-lg shadow-sm" placeholder="Search trauma, teens, virtual..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                  </div>
+                  <button onClick={() => { setCurrentGroup({groupName:"", therapist:"", email:"[Awaiting Response]", viewed:"false", status:"Pending"}); setShowAddForm(true); }} className="px-6 py-4 bg-indigo-800 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-900">+ NEW LEAD</button>
+                </div>
 
-              <div className="space-y-6">
-                {processedData.map(group => {
-                  const isNew = !group.viewed || String(group.viewed).toLowerCase() === 'false';
-                  const isExpanded = expandedId === group.id;
-                  const isContacted = !!group.lastContacted;
+                <div className="space-y-6">
+                  {processedData.map(group => {
+                    const isNew = !group.viewed || String(group.viewed).toLowerCase() === 'false';
+                    const isExpanded = expandedId === group.id;
+                    const isContacted = !!group.lastContacted;
 
-                  return (
-                    <div key={group.id} className={`bg-white rounded-[1.5rem] border-2 transition-all relative ${isNew ? 'priority-lead' : 'border-white shadow-sm hover:border-indigo-100'} ${isContacted ? 'bg-emerald-50/20' : ''}`}>
-                      <div className="p-6 cursor-pointer" onClick={() => { setExpandedId(isExpanded ? null : group.id); if(isNew) updateCloud({...group, viewed:"true"}); }}>
-                        <div className="flex justify-between items-start pr-12">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                {isNew && <span className="bg-indigo-600 text-white text-[8px] px-2 py-0.5 rounded font-black uppercase">New</span>}
-                                <h3 className="text-xl font-black text-slate-800">{group.groupName}</h3>
+                    return (
+                      <div key={group.id} className={`bg-white rounded-2xl border-2 transition-all relative ${isNew ? 'priority-lead' : 'border-gray-200'} ${isContacted ? 'bg-emerald-50/30 border-emerald-100' : ''}`}>
+                        <div className="p-6 cursor-pointer" onClick={() => { setExpandedId(isExpanded ? null : group.id); if(isNew) updateCloud({...group, viewed:"true"}); }}>
+                          <div className="flex justify-between items-start pr-12">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                  {isNew && <span className="bg-indigo-600 text-white text-[8px] px-2 py-0.5 rounded font-black uppercase">Action Needed</span>}
+                                  <h3 className="text-xl font-bold text-gray-900">{group.groupName}</h3>
+                              </div>
+                              <p className="text-indigo-600 font-bold">{group.therapist}</p>
                             </div>
-                            <p className="font-bold text-indigo-600">{group.therapist}</p>
+                            <div className="flex gap-4">
+                              <button onClick={(e) => {e.stopPropagation(); setCurrentGroup(group); setShowEditForm(true);}} className="text-gray-300 hover:text-indigo-600"><i className="fas fa-edit"></i></button>
+                              <button onClick={(e) => {e.stopPropagation(); if(confirm("Delete lead?")) updateCloud(group, "delete");}} className="text-gray-300 hover:text-red-500"><i className="fas fa-trash-alt text-lg"></i></button>
+                            </div>
                           </div>
-                          <div className="flex gap-3">
-                            <button onClick={(e) => {e.stopPropagation(); setCurrentGroup(group); setShowEditForm(true);}} className="text-slate-300 hover:text-indigo-600"><i className="fas fa-edit"></i></button>
-                            <button onClick={(e) => {e.stopPropagation(); if(confirm("Delete?")) updateCloud(group, "delete");}} className="text-slate-300 hover:text-red-500"><i className="fas fa-trash"></i></button>
-                          </div>
+
+                          {isExpanded && (
+                            <div className="mt-6 pt-6 border-t border-gray-100 space-y-6">
+                              <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                                  <p><strong>County:</strong> {group.county}</p>
+                                  <p><strong>Status:</strong> {group.status}</p>
+                                  <p><strong>Last Contact:</strong> {group.lastContacted || "Never"}</p>
+                                  <p><strong>Phone:</strong> {group.phone || "---"}</p>
+                              </div>
+
+                              <div className="bg-gray-50 p-4 rounded-xl space-y-4">
+                                  <h4 className="text-xs font-black uppercase text-gray-400">Outreach Verification Draft</h4>
+                                  <div>
+                                      <label className="text-[10px] font-bold text-indigo-600 uppercase">Direct Email</label>
+                                      <div className="flex gap-2">
+                                          <input readOnly value={group.email} className="flex-1 bg-white border p-2 rounded text-sm font-bold" />
+                                          <button onClick={(e) => {e.stopPropagation(); handleCopy(group.email, 'email-'+group.id);}} className="bg-indigo-100 text-indigo-700 px-3 rounded font-bold text-xs">{copiedType === 'email-'+group.id ? 'Copied!' : 'Copy'}</button>
+                                      </div>
+                                  </div>
+                                  <div>
+                                      <label className="text-[10px] font-bold text-indigo-600 uppercase">Verification Message</label>
+                                      <textarea readOnly value={getEmailDraft(group)} className="w-full bg-white border p-2 rounded text-xs h-32 resize-none leading-relaxed" />
+                                      <button onClick={(e) => {e.stopPropagation(); handleCopy(getEmailDraft(group), 'msg-'+group.id);}} className="w-full mt-2 bg-indigo-600 text-white py-2 rounded font-bold text-xs">{copiedType === 'msg-'+group.id ? 'Message Copied!' : 'Copy Message Draft'}</button>
+                                  </div>
+                                  <button onClick={(e) => {e.stopPropagation(); updateCloud({...group, lastContacted: new Date().toLocaleDateString()}); }} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-emerald-700 transition">Mark Outreach Sent & Saved</button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-
-                        {isExpanded && (
-                          <div className="mt-6 pt-6 border-t border-slate-50 space-y-6 animate-in fade-in duration-300">
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <p><strong>County:</strong> {group.county}</p>
-                                <p><strong>Modality:</strong> {group.modality}</p>
-                                <p><strong>Status:</strong> {group.status}</p>
-                                <p><strong>Last Contact:</strong> {group.lastContacted || "Never"}</p>
-                            </div>
-
-                            {/* EMAIL SECTION */}
-                            <div className="bg-slate-50 p-4 rounded-xl space-y-4">
-                                <h4 className="text-xs font-black uppercase text-slate-400">Outreach Draft</h4>
-                                <div>
-                                    <label className="text-[10px] font-bold text-indigo-600">RECIPIENT EMAIL</label>
-                                    <div className="flex gap-2">
-                                        <input readOnly value={group.email} className="flex-1 bg-white border p-2 rounded text-sm font-bold" />
-                                        <button onClick={(e) => {e.stopPropagation(); handleCopy(group.email, 'email-'+group.id);}} className="bg-indigo-100 text-indigo-700 px-3 rounded font-bold text-xs">{copiedType === 'email-'+group.id ? 'Copied!' : 'Copy'}</button>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="text-[10px] font-bold text-indigo-600">MESSAGE</label>
-                                    <textarea readOnly value={getEmailDraft(group)} className="w-full bg-white border p-2 rounded text-xs h-32 resize-none leading-relaxed" />
-                                    <button onClick={(e) => {e.stopPropagation(); handleCopy(getEmailDraft(group), 'msg-'+group.id);}} className="w-full mt-2 bg-indigo-600 text-white py-2 rounded font-bold text-xs">{copiedType === 'msg-'+group.id ? 'Message Copied!' : 'Copy Message Draft'}</button>
-                                </div>
-                                <button onClick={(e) => {e.stopPropagation(); updateCloud({...group, lastContacted: new Date().toLocaleDateString()}); }} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold">Mark as Emailed Today</button>
-                            </div>
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </main>
 
               {/* MODAL FORM */}
               {(showAddForm || showEditForm) && (
-                <div className="fixed inset-0 bg-slate-900/60 z-[90] flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-slate-900/60 z-[90] flex items-center justify-center p-4 backdrop-blur-sm">
                   <div className="bg-white p-8 rounded-3xl w-full max-w-lg shadow-2xl">
-                    <h2 className="text-xl font-black mb-6">{showEditForm ? 'Edit Lead' : 'New Lead'}</h2>
+                    <h2 className="text-xl font-black mb-6 uppercase text-indigo-900">{showEditForm ? 'Update Details' : 'Manual Entry'}</h2>
                     <form onSubmit={e => {e.preventDefault(); updateCloud(currentGroup, showEditForm ? 'edit' : 'add'); setShowAddForm(false); setShowEditForm(false);}} className="space-y-4">
                         <input className="w-full p-4 bg-slate-50 rounded-xl" placeholder="Group Name" value={currentGroup.groupName || ""} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} required />
                         <input className="w-full p-4 bg-slate-50 rounded-xl" placeholder="Therapist" value={currentGroup.therapist || ""} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} required />
-                        <input className="w-full p-4 border-2 border-indigo-100 rounded-xl font-bold" placeholder="Email" value={currentGroup.email || ""} onChange={e => setCurrentGroup({...currentGroup, email:e.target.value})} />
+                        <input className="w-full p-4 border-2 border-indigo-100 rounded-xl font-bold text-indigo-700" placeholder="Email" value={currentGroup.email || ""} onChange={e => setCurrentGroup({...currentGroup, email:e.target.value})} />
+                        <input className="w-full p-4 bg-slate-50 rounded-xl" placeholder="Phone" value={currentGroup.phone || ""} onChange={e => setCurrentGroup({...currentGroup, phone:e.target.value})} />
                         <div className="grid grid-cols-2 gap-4">
                             <select className="p-4 bg-slate-50 rounded-xl" value={currentGroup.status || "Pending"} onChange={e => setCurrentGroup({...currentGroup, status:e.target.value})}><option>Pending</option><option>Verified</option></select>
                             <input className="p-4 bg-slate-50 rounded-xl" placeholder="County" value={currentGroup.county || ""} onChange={e => setCurrentGroup({...currentGroup, county:e.target.value})} />
                         </div>
                         <div className="flex gap-4 pt-4">
                             <button type="button" onClick={() => {setShowAddForm(false); setShowEditForm(false);}} className="flex-1 font-bold text-slate-400">Cancel</button>
-                            <button type="submit" className="flex-1 bg-indigo-600 text-white p-4 rounded-xl font-bold">Save</button>
+                            <button type="submit" className="flex-1 bg-indigo-600 text-white p-4 rounded-xl font-bold shadow-lg">Save to Cloud</button>
                         </div>
                     </form>
                   </div>
