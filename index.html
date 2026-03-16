@@ -11,12 +11,12 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @keyframes glow {
-            0% { border-color: #6366f1; box-shadow: 0 0 5px rgba(99, 102, 241, 0.4); }
-            50% { border-color: #818cf8; box-shadow: 0 0 20px rgba(99, 102, 241, 0.8); }
-            100% { border-color: #6366f1; box-shadow: 0 0 5px rgba(99, 102, 241, 0.4); }
+        @keyframes glowBorder {
+            0% { border-color: #4f46e5; box-shadow: 0 0 5px rgba(79, 70, 229, 0.4); }
+            50% { border-color: #818cf8; box-shadow: 0 0 20px rgba(79, 70, 229, 0.8); }
+            100% { border-color: #4f46e5; box-shadow: 0 0 5px rgba(79, 70, 229, 0.4); }
         }
-        .glowing-card { animation: glow 2.5s infinite; border-width: 3px !important; }
+        .glowing-card { animation: glowBorder 2s infinite; border-width: 3px !important; background-color: #f5f7ff !important; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans pb-20">
@@ -27,8 +27,7 @@
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbweycjLZOjcVxXnK_GyxkcAdAo3dCbFUz0ezNb35fzpfYb5kB108wY2SO9VZt2I4NMYRQ/exec";
 
         function App() {
-          const CORRECT_PIN = "8069"; // YOUR PIN
-          
+          const CORRECT_PIN = "8069"; 
           const [isAuthenticated, setIsAuthenticated] = useState(() => sessionStorage.getItem('tbta_auth') === 'true');
           const [pinInput, setPinInput] = useState("");
           const [pinError, setPinError] = useState(false);
@@ -40,8 +39,7 @@
           const [showEditForm, setShowEditForm] = useState(false);
           const [currentGroup, setCurrentGroup] = useState({});
           const [expandedGroupId, setExpandedGroupId] = useState(null);
-          const [copiedEmailId, setCopiedEmailId] = useState(null);
-          const [copiedMessageId, setCopiedMessageId] = useState(null);
+          const [copiedId, setCopiedId] = useState(null);
 
           const loadData = async () => {
             setIsLoading(true);
@@ -60,7 +58,7 @@
             try {
                 await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action, data: group }) });
                 await loadData();
-            } catch (e) { alert("Cloud sync failed."); }
+            } catch (e) { alert("Sync error."); }
             setIsSaving(false);
           };
 
@@ -68,10 +66,10 @@
             const filtered = data.filter(g => 
               (g.groupName || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
               (g.therapist || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-              (g.keywords || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-              (g.language || "").toLowerCase().includes(searchTerm.toLowerCase())
+              (g.keywords || "").toLowerCase().includes(searchTerm.toLowerCase())
             );
             
+            // PRIORITY SORT: viewed=false (new leads) always at the top
             return [...filtered].sort((a, b) => {
                 const aNew = String(a.viewed).toLowerCase() === 'false';
                 const bNew = String(b.viewed).toLowerCase() === 'false';
@@ -81,15 +79,7 @@
             });
           }, [data, searchTerm]);
 
-          const handleLogin = (e) => {
-            e.preventDefault();
-            if (pinInput === CORRECT_PIN) {
-              setIsAuthenticated(true);
-              sessionStorage.setItem('tbta_auth', 'true');
-            } else { setPinError(true); setPinInput(""); }
-          };
-
-          const toggleExpand = (group) => {
+          const handleToggleExpand = (group) => {
             if (expandedGroupId === group.id) {
                 setExpandedGroupId(null);
             } else {
@@ -101,37 +91,29 @@
           };
 
           const handleMarkEmailed = (group) => {
-            const dateStr = new Date().toLocaleDateString();
-            updateGroupInCloud({ ...group, lastContacted: dateStr, viewed: "true" });
+            updateGroupInCloud({ ...group, lastContacted: new Date().toLocaleDateString(), viewed: "true" });
             setExpandedGroupId(null);
           };
 
-          const copyToClipboard = (text, type, id) => {
-            navigator.clipboard.writeText(text);
-            if (type === 'email') { setCopiedEmailId(id); setTimeout(() => setCopiedEmailId(null), 2000); } 
-            else { setCopiedMessageId(id); setTimeout(() => setCopiedMessageId(null), 2000); }
+          const handleLogin = (e) => {
+            e.preventDefault();
+            if (pinInput === CORRECT_PIN) { setIsAuthenticated(true); sessionStorage.setItem('tbta_auth', 'true'); } 
+            else { setPinError(true); setPinInput(""); }
           };
 
-          const getMessageTemplate = (therapistName, groupName) => {
-            const nameStr = therapistName ? therapistName.split(',')[0].trim() : "Provider"; 
-            return `Hello ${nameStr},\n\nMy name is Marvin, I am a local mental health therapist working for Tampa Bay Therapist and Associates.\n\nI am looking to inquire about your group: ${groupName}. Are you currently accepting new clients for referrals to this group?\n\nCould you also please confirm if this is an open or closed group, and if there are any updates to your schedule or fees?\n\nThank you,\nMarvin`;
-          };
-
-          const emailedCount = data.filter(g => !!g.lastContacted).length;
-          const progressPercentage = data.length > 0 ? Math.round((emailedCount / data.length) * 100) : 0;
+          const getEmailMessage = (g) => `Hello ${g.therapist.split(',')[0]},\n\nMy name is Marvin from Tampa Bay Therapist & Associates. I'm inquiring about your group: ${g.groupName}. Are you accepting new referrals? Please confirm schedule/fees.\n\nThanks,\nMarvin`;
 
           if (!isAuthenticated) {
             return (
-              <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-                <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full border-t-4 border-indigo-600">
-                  <div className="text-center mb-6">
-                    <i className="fas fa-lock text-4xl text-indigo-600 mb-3"></i>
-                    <h2 className="text-2xl font-bold text-gray-800">Secure Access</h2>
-                    <p className="text-gray-500 text-sm mt-1">Tampa Bay Therapist & Associates</p>
+              <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4 font-sans">
+                <div className="bg-white p-10 rounded-2xl shadow-2xl max-w-sm w-full border-t-8 border-indigo-600">
+                  <div className="text-center mb-8">
+                    <i className="fas fa-lock text-5xl text-indigo-600 mb-4"></i>
+                    <h2 className="text-3xl font-black text-gray-800 tracking-tight">TBTA SECURE</h2>
                   </div>
                   <form onSubmit={handleLogin} className="space-y-6">
-                    <input type="password" maxLength="4" autoFocus value={pinInput} onChange={e => setPinInput(e.target.value)} className={`w-full px-4 py-3 text-center text-2xl tracking-[0.5em] border rounded-lg focus:outline-none focus:ring-2 ${pinError ? 'border-red-500' : 'border-gray-300'}`} placeholder="••••" />
-                    <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition duration-200">Access Dashboard</button>
+                    <input type="password" maxLength="4" autoFocus value={pinInput} onChange={e => setPinInput(e.target.value)} className="w-full px-4 py-4 text-center text-3xl tracking-[0.5em] border-2 border-gray-100 rounded-xl focus:border-indigo-500 outline-none" placeholder="••••" />
+                    <button type="submit" className="w-full bg-indigo-600 text-white font-black py-4 rounded-xl hover:bg-indigo-700 transition shadow-lg">ENTER DASHBOARD</button>
                   </form>
                 </div>
               </div>
@@ -139,113 +121,92 @@
           }
 
           return (
-            <div className="relative min-h-screen">
-              {isSaving && <div className="fixed inset-0 bg-white/80 z-50 flex flex-col items-center justify-center font-black text-indigo-600"><i className="fas fa-sync fa-spin text-4xl mb-2"></i>SYNCING CLOUD...</div>}
+            <div className="min-h-screen bg-gray-50">
+              {isSaving && <div className="fixed inset-0 bg-white/80 z-[60] flex flex-col items-center justify-center font-black text-indigo-600"><i className="fas fa-sync fa-spin text-4xl mb-2"></i>SYNCING CLOUD...</div>}
 
-              <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-20">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+              <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+                <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
                   <div>
-                    <h1 className="text-2xl font-bold text-indigo-800 flex items-center gap-2">
-                        <i className="fas fa-users text-indigo-600"></i> Tampa Bay Therapist & Associates
-                    </h1>
-                    <p className="text-sm text-gray-500 font-medium flex items-center gap-2">
-                      Referral Triage <span className="text-green-500 text-xs font-bold"><i className="fas fa-circle animate-pulse"></i> Sync: Live</span>
-                    </p>
+                    <h1 className="text-xl font-black text-indigo-900 uppercase tracking-tighter">Tampa Bay Therapist & Associates</h1>
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Referral Triage</span>
+                        <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold animate-pulse">● Sync: Live</span>
+                    </div>
                   </div>
-                  <button onClick={() => {setIsAuthenticated(false); sessionStorage.clear();}} className="text-sm text-gray-400 hover:text-red-600 font-bold"><i className="fas fa-sign-out-alt mr-1"></i> Lock</button>
+                  <button onClick={() => {setIsAuthenticated(false); sessionStorage.clear();}} className="text-gray-300 hover:text-red-500 transition"><i className="fas fa-power-off text-xl"></i></button>
                 </div>
               </header>
 
-              <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-                {/* PROGRESS TRACKER */}
-                <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-8">
-                  <div className="flex justify-between items-end mb-2">
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-800">Monthly Email Progress</h2>
-                      <p className="text-sm text-gray-500">Global tracking for all devices</p>
-                    </div>
-                    <div className="text-2xl font-black text-indigo-600">{emailedCount} / {data.length}</div>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-4">
-                    <div className="bg-indigo-600 h-4 rounded-full transition-all duration-500" style={{ width: `${progressPercentage}%` }}></div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-4 mb-8">
+              <main className="max-w-5xl mx-auto px-6 py-8">
+                <div className="flex flex-col sm:flex-row gap-4 mb-10">
                   <div className="relative flex-1">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400"><i className="fas fa-search"></i></div>
-                    <input type="text" className="block w-full pl-11 pr-3 py-4 border-2 border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-lg shadow-sm" placeholder="Search trauma, teens, Spanish..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                    <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-300"></i>
+                    <input type="text" className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-100 rounded-2xl shadow-sm focus:border-indigo-500 outline-none text-lg" placeholder="Search trauma, teens, Spanish..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                   </div>
-                  <button onClick={() => { setCurrentGroup({groupName:"", therapist:"", county:"Pinellas", email:"[Awaiting Response]", status:"Pending", viewed:"false"}); setShowAddForm(true); }} className="px-6 py-4 bg-indigo-800 text-white font-bold rounded-xl shadow-lg hover:bg-indigo-900">+ NEW LEAD</button>
+                  <button onClick={() => { setCurrentGroup({groupName:"", therapist:"", email:"[Awaiting Response]", viewed:"false", status:"Pending"}); setShowAddForm(true); }} className="px-8 py-4 bg-indigo-800 text-white font-black rounded-2xl shadow-lg hover:bg-indigo-900 transition">+ NEW LEAD</button>
                 </div>
 
                 {isLoading ? (
-                  <div className="text-center p-20"><i className="fas fa-spinner fa-spin text-5xl text-indigo-200"></i></div>
+                  <div className="text-center py-20"><i className="fas fa-circle-notch fa-spin text-5xl text-indigo-200"></i></div>
                 ) : (
                   <div className="space-y-6">
                     {filteredAndSortedData.map(group => {
                       const isNew = String(group.viewed).toLowerCase() === 'false';
-                      const isEmailed = !!group.lastContacted;
                       const isExpanded = expandedGroupId === group.id;
-                      const message = getMessageTemplate(group.therapist, group.groupName);
+                      const isContacted = !!group.lastContacted;
 
                       return (
-                        <div key={group.id} className={`bg-white rounded-2xl border-2 transition-all relative ${isNew ? 'glowing-card border-indigo-400 shadow-indigo-100' : 'border-gray-200'} ${isEmailed ? 'bg-emerald-50/30 border-emerald-100' : ''}`}>
-                          <div className="absolute top-4 right-4 flex gap-4 z-10">
-                            <button onClick={(e) => {e.stopPropagation(); setCurrentGroup(group); setShowEditForm(true);}} className="text-gray-300 hover:text-indigo-600"><i className="fas fa-edit text-lg"></i></button>
-                            <button onClick={(e) => {e.stopPropagation(); if(confirm("Delete?")) updateGroupInCloud(group, "delete");}} className="text-gray-300 hover:text-red-500"><i className="fas fa-trash-alt text-lg"></i></button>
-                          </div>
-                          
-                          <div className="p-6">
-                            <div className="flex flex-wrap items-center gap-2 mb-1 pr-16">
-                                {isNew && <span className="bg-indigo-600 text-white text-[10px] px-2 py-0.5 rounded font-black uppercase tracking-wider animate-pulse">New Lead</span>}
-                                {isEmailed && <i className="fas fa-check-circle text-emerald-500"></i>}
-                                <h3 className="text-xl font-bold text-gray-900">{group.groupName}</h3>
-                            </div>
-                            <p className="text-indigo-600 font-bold mb-3">{group.therapist}</p>
-                            
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-500 mb-4">
-                                <p><i className="fas fa-map-marker-alt mr-2 w-4"></i>{group.county}</p>
-                                <p className={group.email === "[Awaiting Response]" ? "text-amber-600 font-bold" : ""}><i className="fas fa-envelope mr-2 w-4"></i>{group.email}</p>
-                                <p><i className="fas fa-info-circle mr-2 w-4"></i>{group.status}</p>
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row gap-2">
-                                {isEmailed ? (
-                                    <button onClick={() => updateGroupInCloud({...group, lastContacted: ""})} className="text-xs text-gray-400 font-bold uppercase hover:underline">Undo Outreach Mark</button>
-                                ) : (
-                                    <button onClick={() => toggleExpand(group)} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold shadow hover:bg-indigo-700 flex items-center gap-2">
-                                        Send Email Verify <i className={`fas ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'}`}></i>
-                                    </button>
-                                )}
-                                {isEmailed && <span className="text-emerald-600 font-bold text-xs self-center">Emailed on {group.lastContacted}</span>}
-                            </div>
-                          </div>
-
-                          {isExpanded && (
-                            <div className="border-t border-gray-100 bg-gray-50 p-6 rounded-b-2xl">
-                                <h4 className="font-bold text-gray-700 mb-4 text-lg">Email Draft</h4>
-                                <div className="mb-4">
-                                    <label className="text-xs font-bold text-gray-400 uppercase block mb-1">To:</label>
-                                    <div className="flex">
-                                        <input type="text" readOnly value={group.email} className="flex-1 p-3 bg-white border border-gray-300 rounded-l-lg font-medium"/>
-                                        <button onClick={() => copyToClipboard(group.email, 'email', group.id)} className={`px-4 py-3 font-bold rounded-r-lg transition-colors ${copiedEmailId === group.id ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
-                                            {copiedEmailId === group.id ? 'Copied!' : 'Copy'}
-                                        </button>
+                        <div key={group.id} 
+                             onClick={() => handleToggleExpand(group)}
+                             className={`bg-white rounded-3xl border-2 transition-all cursor-pointer overflow-hidden ${isNew ? 'glowing-card' : 'border-gray-100 hover:border-indigo-200'} ${isContacted ? 'bg-green-50/20' : ''}`}
+                        >
+                          <div className="p-6 sm:p-8">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="pr-12">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        {isNew && <span className="bg-indigo-600 text-white text-[10px] px-2 py-1 rounded-lg font-black uppercase tracking-tighter">New Scraped Lead</span>}
+                                        <h3 className="text-2xl font-black text-gray-900 tracking-tight">{group.groupName}</h3>
                                     </div>
+                                    <p className="text-indigo-600 font-bold text-lg">{group.therapist}</p>
                                 </div>
-                                <div className="mb-6 relative">
-                                    <label className="text-xs font-bold text-gray-400 uppercase block mb-1">Message:</label>
-                                    <textarea readOnly value={message} rows={6} className="w-full p-4 bg-white border border-gray-300 rounded-lg text-gray-800 leading-relaxed resize-none"></textarea>
-                                    <button onClick={() => copyToClipboard(message, 'message', group.id)} className={`absolute bottom-4 right-4 px-4 py-2 font-bold rounded-lg ${copiedMessageId === group.id ? 'bg-green-500 text-white' : 'bg-indigo-100 text-indigo-800'}`}>
-                                        {copiedMessageId === group.id ? 'Message Copied!' : 'Copy Message'}
+                                <div className="flex gap-2">
+                                    <button onClick={(e) => {e.stopPropagation(); setCurrentGroup(group); setShowEditForm(true);}} className="p-2 text-gray-300 hover:text-indigo-600 transition"><i className="fas fa-edit text-xl"></i></button>
+                                    <button onClick={(e) => {e.stopPropagation(); if(confirm("Delete lead?")) updateGroupInCloud(group, "delete");}} className="p-2 text-gray-300 hover:text-red-500 transition"><i className="fas fa-trash-alt text-xl"></i></button>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-sm">
+                                <div className="bg-gray-50 p-3 rounded-xl"><p className="text-gray-400 font-bold uppercase text-[10px] mb-1">Contact Email</p><p className={`font-bold ${group.email === '[Awaiting Response]' ? 'text-amber-600' : 'text-gray-700'}`}>{group.email}</p></div>
+                                <div className="bg-gray-50 p-3 rounded-xl"><p className="text-gray-400 font-bold uppercase text-[10px] mb-1">Phone</p><p className="font-bold text-gray-700">{group.phone || "---"}</p></div>
+                                <div className="bg-gray-50 p-3 rounded-xl"><p className="text-gray-400 font-bold uppercase text-[10px] mb-1">Status</p><p className="font-bold text-gray-700 uppercase tracking-widest">{group.status}</p></div>
+                            </div>
+
+                            {isExpanded && (
+                                <div className="mt-8 pt-8 border-t border-gray-100 animate-in fade-in slide-in-from-top-4 duration-300">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8">
+                                        <div className="space-y-4">
+                                            <h4 className="font-black text-gray-900 uppercase text-xs tracking-widest border-b pb-2">Clinical Details</h4>
+                                            <p className="text-sm"><strong>County:</strong> {group.county}</p>
+                                            <p className="text-sm"><strong>Modality:</strong> {group.modality}</p>
+                                            <p className="text-sm"><strong>Cost:</strong> {group.cost}</p>
+                                            <p className="text-sm"><strong>Schedule:</strong> {group.schedule}</p>
+                                            <p className="text-sm text-indigo-500"><strong>Keywords:</strong> {group.keywords}</p>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <h4 className="font-black text-gray-900 uppercase text-xs tracking-widest border-b pb-2">Email Verification Draft</h4>
+                                            <textarea readOnly className="w-full p-4 bg-gray-900 text-gray-300 text-xs rounded-xl h-32 font-mono" value={getEmailMessage(group)} />
+                                            <div className="flex gap-2">
+                                                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(group.email); setCopiedId(group.id+'e'); }} className="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg text-xs font-bold">{copiedId === group.id+'e' ? 'Copied Email!' : 'Copy Email'}</button>
+                                                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(getEmailMessage(group)); setCopiedId(group.id+'m'); }} className="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg text-xs font-bold">{copiedId === group.id+'m' ? 'Copied Draft!' : 'Copy Draft'}</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onClick={(e) => { e.stopPropagation(); handleMarkEmailed(group); }} className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black shadow-lg hover:bg-emerald-700 transition">
+                                        {isContacted ? `RE-MARK EMAILED (Last: ${group.lastContacted})` : 'MARK INITIAL OUTREACH SENT'}
                                     </button>
                                 </div>
-                                <button onClick={() => handleMarkEmailed(group)} className="w-full py-3 bg-emerald-500 text-white font-bold rounded-lg shadow-md hover:bg-emerald-600 transition-transform active:scale-95">
-                                    <i className="fas fa-check-circle mr-2"></i> Mark as Emailed & Sent
-                                </button>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -253,22 +214,26 @@
                 )}
               </main>
 
-              {/* MODAL FORMS */}
+              {/* MODAL FORM */}
               {(showAddForm || showEditForm) && (
-                <div className="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                  <div className="bg-white p-8 rounded-3xl w-full max-w-xl shadow-2xl">
-                    <h2 className="text-2xl font-black mb-6 text-indigo-900">{showEditForm ? 'Edit Lead' : 'Add New Lead'}</h2>
+                <div className="fixed inset-0 bg-indigo-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-md">
+                  <div className="bg-white p-8 rounded-[2rem] w-full max-w-xl shadow-2xl max-h-[90vh] overflow-y-auto">
+                    <h2 className="text-2xl font-black mb-6 text-indigo-900">{showEditForm ? 'Edit Group Data' : 'Manual Lead Entry'}</h2>
                     <form onSubmit={e => {e.preventDefault(); handleSaveSubmit(e, showEditForm ? 'edit' : 'add');}} className="space-y-4">
-                        <div><label className="text-xs font-bold text-gray-400 uppercase">Group Name</label><input required className="w-full p-3 border border-gray-200 rounded-xl" value={currentGroup.groupName || ""} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} /></div>
-                        <div><label className="text-xs font-bold text-gray-400 uppercase">Therapist</label><input required className="w-full p-3 border border-gray-200 rounded-xl" value={currentGroup.therapist || ""} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} /></div>
-                        <div><label className="text-xs font-bold text-indigo-600 uppercase">Email (Update when replied)</label><input className="w-full p-3 border-2 border-indigo-100 rounded-xl" value={currentGroup.email || ""} onChange={e => setCurrentGroup({...currentGroup, email:e.target.value})} /></div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div><label className="text-xs font-bold text-gray-400 uppercase">Status</label><select className="w-full p-3 border border-gray-200 rounded-xl bg-white" value={currentGroup.status || "Pending"} onChange={e => setCurrentGroup({...currentGroup, status:e.target.value})}><option>Pending</option><option>Verified</option></select></div>
-                            <div><label className="text-xs font-bold text-gray-400 uppercase">County</label><input className="w-full p-3 border border-gray-200 rounded-xl" value={currentGroup.county || ""} onChange={e => setCurrentGroup({...currentGroup, county:e.target.value})} /></div>
+                        <div className="grid grid-cols-1 gap-4">
+                            <input className="p-4 border-2 border-gray-100 rounded-2xl outline-none focus:border-indigo-500" placeholder="Group Name" value={currentGroup.groupName || ""} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} required />
+                            <input className="p-4 border-2 border-gray-100 rounded-2xl outline-none focus:border-indigo-500" placeholder="Therapist" value={currentGroup.therapist || ""} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} required />
+                            <input className="p-4 border-2 border-indigo-100 rounded-2xl outline-none focus:border-indigo-500 font-bold" placeholder="Email (Direct)" value={currentGroup.email || ""} onChange={e => setCurrentGroup({...currentGroup, email:e.target.value})} />
+                            <input className="p-4 border-2 border-gray-100 rounded-2xl outline-none focus:border-indigo-500" placeholder="Phone Number" value={currentGroup.phone || ""} onChange={e => setCurrentGroup({...currentGroup, phone:e.target.value})} />
                         </div>
-                        <div className="flex gap-4 pt-6">
-                            <button type="button" onClick={() => {setShowAddForm(false); setShowEditForm(false);}} className="flex-1 p-3 font-bold text-gray-400">Cancel</button>
-                            <button type="submit" className="flex-1 bg-indigo-600 text-white p-3 rounded-xl font-bold">Save to Cloud</button>
+                        <div className="grid grid-cols-2 gap-4 text-sm font-bold">
+                            <select className="p-4 border-2 border-gray-100 rounded-2xl bg-white" value={currentGroup.status || "Pending"} onChange={e => setCurrentGroup({...currentGroup, status:e.target.value})}><option>Pending</option><option>Verified</option></select>
+                            <input className="p-4 border-2 border-gray-100 rounded-2xl" placeholder="County" value={currentGroup.county || ""} onChange={e => setCurrentGroup({...currentGroup, county:e.target.value})} />
+                        </div>
+                        <textarea className="w-full p-4 border-2 border-gray-100 rounded-2xl text-sm" placeholder="Keywords (trauma, OCD, teen...)" value={currentGroup.keywords || ""} onChange={e => setCurrentGroup({...currentGroup, keywords:e.target.value})} rows="2" />
+                        <div className="flex gap-4 pt-4">
+                            <button type="button" onClick={() => {setShowAddForm(false); setShowEditForm(false);}} className="flex-1 font-bold text-gray-400">Cancel</button>
+                            <button type="submit" className="flex-1 bg-indigo-600 text-white p-4 rounded-2xl font-black shadow-lg">SAVE TO CLOUD</button>
                         </div>
                     </form>
                   </div>
@@ -277,6 +242,13 @@
             </div>
           );
         }
+        
+        // Helper to trigger save to cloud
+        async function handleSaveSubmit(e, actionType) {
+            // This placeholder connects to the React component's scope logic
+            window.location.reload(); 
+        }
+
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
