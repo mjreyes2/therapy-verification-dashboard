@@ -2,36 +2,28 @@ import os
 import requests
 import json
 
-# This tells the robot where your Google Sheet lives
-# (We set this up in your GitHub Secrets)
+# This looks for the secret you just saved in GitHub Settings
 GOOGLE_SCRIPT_URL = os.environ.get('GOOGLE_SCRIPT_URL')
 
-# The list of websites you provided
-TARGET_URLS = [
-    "https://baycare.org/events",
-    "https://aa-intergroup.org/meetings/",
-    "https://growtherapy.com/find/florida/cash?treatmentMethods[0]=Group%20Therapy",
-    "https://www.limecounseling.com/services/groups"
-]
-
 def scan_for_groups():
-    print(f"🤖 Research Bot starting monthly scan of {len(TARGET_URLS)} sites...")
+    if not GOOGLE_SCRIPT_URL:
+        print("❌ ERROR: GOOGLE_SCRIPT_URL is missing! Check your GitHub Secrets.")
+        return
+
+    print(f"🤖 Research Bot starting scan...")
     
-    # In a real scenario, this would use 'BeautifulSoup' or 'Playwright' 
-    # to scrape the actual HTML. For this setup, we're building the 
-    # connection to your Google Sheet first.
-    
+    # This is a test group to make sure the connection works
     new_finds = [
         {
             "groupName": "NEW: BayCare Caregiver Support",
             "therapist": "BayCare Staff",
-            "county": "Pinellas/Hillsborough",
+            "county": "Pinellas",
             "modality": "In-Person",
             "type": "Open",
             "email": "events@baycare.org",
             "cost": "Free",
-            "schedule": "Check Site for Dates",
-            "keywords": "caregiver, memory, dementia",
+            "schedule": "Monthly",
+            "keywords": "caregiver, memory",
             "language": "English",
             "status": "Pending"
         }
@@ -40,13 +32,15 @@ def scan_for_groups():
     for group in new_finds:
         try:
             print(f"📤 Sending '{group['groupName']}' to Google Sheets...")
+            # We use a timeout to make sure it doesn't hang forever
             response = requests.post(
                 GOOGLE_SCRIPT_URL, 
-                data=json.dumps({"action": "add", "data": group})
+                data=json.dumps({"action": "add", "data": group}),
+                timeout=30 
             )
             print(f"✅ Response: {response.text}")
         except Exception as e:
-            print(f"❌ Error sending data: {e}")
+            print(f"❌ Error: {e}")
 
 if __name__ == "__main__":
     scan_for_groups()
