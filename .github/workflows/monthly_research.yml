@@ -1,0 +1,28 @@
+name: Monthly Research Bot
+
+on:
+  schedule:
+    # This runs at 00:00 on the 1st day of every month
+    - cron: '0 0 1 * *'
+  workflow_dispatch: # This allows you to run it manually to test
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4
+
+      - name: Run Research Bot
+        env:
+          GOOGLE_SCRIPT_URL: ${{ secrets.GOOGLE_SCRIPT_URL }}
+        run: python research_bot.py
