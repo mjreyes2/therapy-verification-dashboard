@@ -42,6 +42,7 @@
           const [showEditForm, setShowEditForm] = useState(false);
           const [currentGroup, setCurrentGroup] = useState({});
           const [expandedId, setExpandedId] = useState(null);
+          const [copiedType, setCopiedType] = useState(null);
 
           const loadData = async () => {
             setIsLoading(true);
@@ -49,79 +50,54 @@
               const res = await fetch(SCRIPT_URL);
               const json = await res.json();
               setData(json);
-            } catch (e) { 
-              console.error(e);
-              alert("Error loading data. Check your connection.");
-            }
+            } catch (e) { console.error(e); }
             setIsLoading(false);
           };
 
           useEffect(() => { if (isAuthenticated) loadData(); }, [isAuthenticated]);
 
           const updateCloud = async (group, action = "edit") => {
-            setIsLoading(true); // Trigger spinning wheel
-            try {
-              await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action, data: group || {id: group} }) });
-              await loadData();
-            } catch (e) {
-              alert("Error syncing with cloud.");
-            }
-            setIsLoading(false);
-          };
-
-          const handleDelete = async (id) => {
-            if (!confirm("Are you sure you want to delete this lead permanently?")) return;
             setIsLoading(true);
             try {
-              await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action: "delete", id: id }) });
+              await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action, data: group }) });
               await loadData();
-            } catch (e) {
-              alert("Delete failed.");
-            }
+            } catch (e) { alert("Sync Error"); }
             setIsLoading(false);
           };
 
-          // --- AGGRESSIVE TOP-SORTING LOGIC ---
+          const handleCopy = (text, type) => {
+            navigator.clipboard.writeText(text);
+            setCopiedType(type);
+            setTimeout(() => setCopiedType(null), 2000);
+          };
+
+          const getEmailDraft = (g) => {
+            const firstName = g.therapist ? g.therapist.split(' ')[0] : "Provider";
+            return `Hello ${firstName},\n\nMy name is Marvin, I am a local mental health therapist working for Tampa Bay Therapist and Associates.\n\nI am looking to inquire about your group: ${g.groupName}. Are you currently accepting new clients for referrals to this group?\n\nCould you also please confirm if this is an open or closed group, and if there are any updates to your schedule or fees?\n\nThank you,\nMarvin`;
+          };
+
           const processedData = useMemo(() => {
             const filtered = data.filter(g => 
               (g.groupName || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
-              (g.therapist || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-              (g.keywords || "").toLowerCase().includes(searchTerm.toLowerCase())
+              (g.therapist || "").toLowerCase().includes(searchTerm.toLowerCase())
             );
-            
             return [...filtered].sort((a, b) => {
                 const aNew = !a.viewed || String(a.viewed).toLowerCase() === 'false';
                 const bNew = !b.viewed || String(b.viewed).toLowerCase() === 'false';
-                const aPending = String(a.status).toLowerCase() === 'pending';
-                const bPending = String(b.status).toLowerCase() === 'pending';
-
                 if (aNew && !bNew) return -1;
                 if (!aNew && bNew) return 1;
-                if (aPending && !bPending) return -1;
-                if (!aPending && bPending) return 1;
                 return 0;
             });
           }, [data, searchTerm]);
-
-          const handleExpand = (group) => {
-            if (expandedId === group.id) {
-                setExpandedId(null);
-            } else {
-                setExpandedId(group.id);
-                if (!group.viewed || String(group.viewed).toLowerCase() === 'false') {
-                    updateCloud({ ...group, viewed: "true" });
-                }
-            }
-          };
 
           if (!isAuthenticated) {
             return (
               <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
                 <div className="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full border-t-8 border-indigo-600">
-                  <h2 className="text-2xl font-black text-center mb-6 text-slate-800 tracking-tight">TBTA SECURITY</h2>
-                  <form onSubmit={(e) => { e.preventDefault(); if(pinInput === CORRECT_PIN) { setIsAuthenticated(true); sessionStorage.setItem('tbta_auth', 'true'); } else { alert("Incorrect PIN"); setPinInput(""); } }} className="space-y-4">
-                    <input type="password" maxLength="4" autoFocus value={pinInput} onChange={e => setPinInput(e.target.value)} className="w-full p-4 text-center text-3xl tracking-widest border rounded-xl outline-none focus:border-indigo-500" placeholder="••••" />
-                    <button className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl hover:bg-indigo-700 transition">ACCESS DASHBOARD</button>
+                  <h2 className="text-2xl font-black text-center mb-6">TBTA SECURITY</h2>
+                  <form onSubmit={(e) => { e.preventDefault(); if(pinInput === CORRECT_PIN) { setIsAuthenticated(true); sessionStorage.setItem('tbta_auth', 'true'); } }} className="space-y-4">
+                    <input type="password" maxLength="4" autoFocus value={pinInput} onChange={e => setPinInput(e.target.value)} className="w-full p-4 text-center text-3xl tracking-widest border rounded-xl" placeholder="••••" />
+                    <button className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl">LOGIN</button>
                   </form>
                 </div>
               </div>
@@ -130,90 +106,96 @@
 
           return (
             <div className="max-w-4xl mx-auto p-4 sm:p-8">
-              {/* GLOBAL LOADING OVERLAY */}
               {isLoading && (
-                <div className="fixed inset-0 bg-white/80 z-[100] flex flex-col items-center justify-center font-black text-indigo-600 backdrop-blur-sm">
+                <div className="fixed inset-0 bg-white/80 z-[100] flex flex-col items-center justify-center font-black text-indigo-600">
                   <i className="fas fa-circle-notch fa-spin text-6xl mb-4"></i>
-                  <span className="text-xl tracking-widest uppercase">Syncing Cloud Database</span>
+                  <span>SYNCING...</span>
                 </div>
               )}
               
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+              <div className="flex justify-between items-center mb-8">
                 <div>
                   <h1 className="text-2xl font-black text-indigo-900 uppercase">Tampa Bay Therapist & Associates</h1>
-                  <p className="text-sm font-bold text-slate-400 flex items-center gap-2">Referral Triage <span className="text-green-500 animate-pulse">● Sync: Live</span></p>
+                  <p className="text-sm font-bold text-slate-400">Referral Triage ● Sync: Live</p>
                 </div>
-                <button onClick={() => { setCurrentGroup({groupName:"", therapist:"", email:"[Awaiting Response]", viewed:"false", status:"Pending"}); setShowAddForm(true); }} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition">+ NEW LEAD</button>
+                <button onClick={() => { setCurrentGroup({groupName:"", therapist:"", email:"[Awaiting Response]", viewed:"false", status:"Pending"}); setShowAddForm(true); }} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg">+ NEW LEAD</button>
               </div>
 
-              <input type="text" placeholder="Search trauma, teens, Spanish..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-5 border-2 border-white rounded-2xl shadow-sm mb-10 text-lg outline-none focus:border-indigo-400" />
+              <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-5 border-2 border-white rounded-2xl shadow-sm mb-10 text-lg outline-none focus:border-indigo-400" />
 
               <div className="space-y-6">
-                {processedData.length > 0 ? processedData.map(group => {
+                {processedData.map(group => {
                   const isNew = !group.viewed || String(group.viewed).toLowerCase() === 'false';
-                  const isContacted = !!group.lastContacted;
                   const isExpanded = expandedId === group.id;
+                  const isContacted = !!group.lastContacted;
 
                   return (
-                    <div key={group.id} 
-                         onClick={() => handleExpand(group)}
-                         className={`bg-white p-6 rounded-[1.5rem] border-2 transition-all cursor-pointer relative ${isNew ? 'priority-lead' : 'border-white shadow-sm hover:border-indigo-100'} ${isContacted ? 'bg-emerald-50/20' : ''}`}
-                    >
-                      <div className="absolute top-6 right-6 flex gap-3">
-                        <button onClick={(e) => {e.stopPropagation(); setCurrentGroup(group); setShowEditForm(true);}} className="text-slate-300 hover:text-indigo-600"><i className="fas fa-edit"></i></button>
-                        <button onClick={(e) => {e.stopPropagation(); handleDelete(group.id);}} className="text-slate-300 hover:text-red-500"><i className="fas fa-trash"></i></button>
-                      </div>
+                    <div key={group.id} className={`bg-white rounded-[1.5rem] border-2 transition-all relative ${isNew ? 'priority-lead' : 'border-white shadow-sm hover:border-indigo-100'} ${isContacted ? 'bg-emerald-50/20' : ''}`}>
+                      <div className="p-6 cursor-pointer" onClick={() => { setExpandedId(isExpanded ? null : group.id); if(isNew) updateCloud({...group, viewed:"true"}); }}>
+                        <div className="flex justify-between items-start pr-12">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                {isNew && <span className="bg-indigo-600 text-white text-[8px] px-2 py-0.5 rounded font-black uppercase">New</span>}
+                                <h3 className="text-xl font-black text-slate-800">{group.groupName}</h3>
+                            </div>
+                            <p className="font-bold text-indigo-600">{group.therapist}</p>
+                          </div>
+                          <div className="flex gap-3">
+                            <button onClick={(e) => {e.stopPropagation(); setCurrentGroup(group); setShowEditForm(true);}} className="text-slate-300 hover:text-indigo-600"><i className="fas fa-edit"></i></button>
+                            <button onClick={(e) => {e.stopPropagation(); if(confirm("Delete?")) updateCloud(group, "delete");}} className="text-slate-300 hover:text-red-500"><i className="fas fa-trash"></i></button>
+                          </div>
+                        </div>
 
-                      <div className="pr-12">
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                          {isNew && <span className="bg-indigo-600 text-white text-[10px] px-2 py-1 rounded font-black uppercase tracking-tighter">Action Needed</span>}
-                          <h3 className="text-xl font-black text-slate-800 tracking-tight">{group.groupName}</h3>
-                        </div>
-                        <p className="font-bold text-indigo-600 mb-4">{group.therapist}</p>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-slate-500">
-                          <p><i className="fas fa-envelope mr-2"></i>{group.email}</p>
-                          <p><i className="fas fa-info-circle mr-2"></i>{group.status}</p>
-                          {group.lastContacted && <p className="text-emerald-600 font-bold"><i className="fas fa-check-circle mr-2"></i>Sent: {group.lastContacted}</p>}
-                        </div>
-                      </div>
+                        {isExpanded && (
+                          <div className="mt-6 pt-6 border-t border-slate-50 space-y-6 animate-in fade-in duration-300">
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <p><strong>County:</strong> {group.county}</p>
+                                <p><strong>Modality:</strong> {group.modality}</p>
+                                <p><strong>Status:</strong> {group.status}</p>
+                                <p><strong>Last Contact:</strong> {group.lastContacted || "Never"}</p>
+                            </div>
 
-                      {isExpanded && (
-                        <div className="mt-6 pt-6 border-t border-slate-50 grid grid-cols-1 sm:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2">
-                           <div className="space-y-2 text-sm">
-                              <p><strong>County:</strong> {group.county}</p>
-                              <p><strong>Modality:</strong> {group.modality}</p>
-                              <p><strong>Schedule:</strong> {group.schedule}</p>
-                              <p className="text-indigo-500 italic"><strong>Keywords:</strong> {group.keywords}</p>
-                           </div>
-                           <div className="space-y-3">
-                              <button onClick={(e) => { e.stopPropagation(); updateCloud({ ...group, lastContacted: new Date().toLocaleDateString(), viewed: "true" }); setExpandedId(null); }} className="w-full bg-emerald-600 text-white p-3 rounded-xl font-bold shadow-md hover:bg-emerald-700">Mark Outreach Sent</button>
-                           </div>
-                        </div>
-                      )}
+                            {/* EMAIL SECTION */}
+                            <div className="bg-slate-50 p-4 rounded-xl space-y-4">
+                                <h4 className="text-xs font-black uppercase text-slate-400">Outreach Draft</h4>
+                                <div>
+                                    <label className="text-[10px] font-bold text-indigo-600">RECIPIENT EMAIL</label>
+                                    <div className="flex gap-2">
+                                        <input readOnly value={group.email} className="flex-1 bg-white border p-2 rounded text-sm font-bold" />
+                                        <button onClick={(e) => {e.stopPropagation(); handleCopy(group.email, 'email-'+group.id);}} className="bg-indigo-100 text-indigo-700 px-3 rounded font-bold text-xs">{copiedType === 'email-'+group.id ? 'Copied!' : 'Copy'}</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-indigo-600">MESSAGE</label>
+                                    <textarea readOnly value={getEmailDraft(group)} className="w-full bg-white border p-2 rounded text-xs h-32 resize-none leading-relaxed" />
+                                    <button onClick={(e) => {e.stopPropagation(); handleCopy(getEmailDraft(group), 'msg-'+group.id);}} className="w-full mt-2 bg-indigo-600 text-white py-2 rounded font-bold text-xs">{copiedType === 'msg-'+group.id ? 'Message Copied!' : 'Copy Message Draft'}</button>
+                                </div>
+                                <button onClick={(e) => {e.stopPropagation(); updateCloud({...group, lastContacted: new Date().toLocaleDateString()}); }} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold">Mark as Emailed Today</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
-                }) : (
-                  <div className="text-center text-slate-400 py-10 font-bold">No matching groups found in the database.</div>
-                )}
+                })}
               </div>
 
-              {/* FORM MODAL */}
+              {/* MODAL FORM */}
               {(showAddForm || showEditForm) && (
-                <div className="fixed inset-0 bg-slate-900/60 z-[90] flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="fixed inset-0 bg-slate-900/60 z-[90] flex items-center justify-center p-4">
                   <div className="bg-white p-8 rounded-3xl w-full max-w-lg shadow-2xl">
-                    <h2 className="text-xl font-black mb-6 uppercase tracking-tight">{showEditForm ? 'Update Details' : 'Manual Lead Entry'}</h2>
+                    <h2 className="text-xl font-black mb-6">{showEditForm ? 'Edit Lead' : 'New Lead'}</h2>
                     <form onSubmit={e => {e.preventDefault(); updateCloud(currentGroup, showEditForm ? 'edit' : 'add'); setShowAddForm(false); setShowEditForm(false);}} className="space-y-4">
-                        <input className="w-full p-4 bg-slate-50 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Group Name" value={currentGroup.groupName || ""} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} required />
-                        <input className="w-full p-4 bg-slate-50 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Therapist" value={currentGroup.therapist || ""} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} required />
-                        <input className="w-full p-4 border-2 border-indigo-100 rounded-xl font-bold text-indigo-700 outline-none" placeholder="Email Address" value={currentGroup.email || ""} onChange={e => setCurrentGroup({...currentGroup, email:e.target.value})} />
+                        <input className="w-full p-4 bg-slate-50 rounded-xl" placeholder="Group Name" value={currentGroup.groupName || ""} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} required />
+                        <input className="w-full p-4 bg-slate-50 rounded-xl" placeholder="Therapist" value={currentGroup.therapist || ""} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} required />
+                        <input className="w-full p-4 border-2 border-indigo-100 rounded-xl font-bold" placeholder="Email" value={currentGroup.email || ""} onChange={e => setCurrentGroup({...currentGroup, email:e.target.value})} />
                         <div className="grid grid-cols-2 gap-4">
                             <select className="p-4 bg-slate-50 rounded-xl" value={currentGroup.status || "Pending"} onChange={e => setCurrentGroup({...currentGroup, status:e.target.value})}><option>Pending</option><option>Verified</option></select>
                             <input className="p-4 bg-slate-50 rounded-xl" placeholder="County" value={currentGroup.county || ""} onChange={e => setCurrentGroup({...currentGroup, county:e.target.value})} />
                         </div>
                         <div className="flex gap-4 pt-4">
                             <button type="button" onClick={() => {setShowAddForm(false); setShowEditForm(false);}} className="flex-1 font-bold text-slate-400">Cancel</button>
-                            <button type="submit" className="flex-1 bg-indigo-600 text-white p-4 rounded-xl font-bold shadow-lg">Save to Cloud</button>
+                            <button type="submit" className="flex-1 bg-indigo-600 text-white p-4 rounded-xl font-bold">Save</button>
                         </div>
                     </form>
                   </div>
