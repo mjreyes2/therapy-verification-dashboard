@@ -40,7 +40,7 @@
           const [searchTerm, setSearchTerm] = useState("");
           const [showAddForm, setShowAddForm] = useState(false);
           const [showEditForm, setShowEditForm] = useState(false);
-          const [deleteConfirm, setDeleteConfirm] = useState(null); // Tracks lead to delete
+          const [deleteConfirm, setDeleteConfirm] = useState(null);
           const [currentGroup, setCurrentGroup] = useState({});
           const [expandedId, setExpandedId] = useState(null);
           const [copiedType, setCopiedType] = useState(null);
@@ -89,6 +89,12 @@
               await loadData();
             } catch (e) { alert("Delete Error"); }
             setIsLoading(false);
+          };
+
+          const handleLogout = () => {
+            setIsAuthenticated(false);
+            sessionStorage.removeItem('tbta_auth');
+            setPinInput(""); // THIS FIXES THE SECURITY ISSUE
           };
 
           const handleCopy = (text, type) => {
@@ -153,7 +159,7 @@
                       Referral Triage <span className="text-green-500 text-xs font-bold"><i className="fas fa-circle animate-pulse"></i> Sync: Live</span>
                     </p>
                   </div>
-                  <button onClick={() => {setIsAuthenticated(false); sessionStorage.clear();}} className="text-sm text-gray-400 hover:text-red-600 font-bold"><i className="fas fa-sign-out-alt mr-1"></i> Lock</button>
+                  <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-red-600 font-bold"><i className="fas fa-sign-out-alt mr-1"></i> Lock</button>
                 </div>
               </header>
 
@@ -223,7 +229,6 @@
                 </div>
               </main>
 
-              {/* MODAL: DELETE CONFIRMATION (REPLACES BROWSER ALERT) */}
               {deleteConfirm && (
                 <div className="fixed inset-0 bg-slate-900/80 z-[110] flex items-center justify-center p-4 backdrop-blur-sm">
                   <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl text-center">
@@ -242,23 +247,22 @@
                 </div>
               )}
 
-              {/* MODAL: ADD/EDIT FORM */}
               {(showAddForm || showEditForm) && (
                 <div className="fixed inset-0 bg-slate-900/60 z-[90] flex items-center justify-center p-4 backdrop-blur-sm">
                   <div className="bg-white p-8 rounded-3xl w-full max-w-lg shadow-2xl">
                     <h2 className="text-xl font-black mb-6 uppercase text-indigo-900">{showEditForm ? 'Edit Lead' : 'Add New Lead'}</h2>
                     <form onSubmit={e => {e.preventDefault(); updateCloud(currentGroup, showEditForm ? 'edit' : 'add'); setShowAddForm(false); setShowEditForm(false);}} className="space-y-4">
-                        <input className="w-full p-4 bg-slate-50 rounded-xl" placeholder="Group Name" value={currentGroup.groupName || ""} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} required />
-                        <input className="w-full p-4 bg-slate-50 rounded-xl" placeholder="Therapist" value={currentGroup.therapist || ""} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} required />
-                        <input className="w-full p-4 border-2 border-indigo-100 rounded-xl font-bold text-indigo-700" placeholder="Direct Email" value={currentGroup.email || ""} onChange={e => setCurrentGroup({...currentGroup, email:e.target.value})} />
-                        <input className="w-full p-4 bg-slate-50 rounded-xl" placeholder="Direct Phone" value={currentGroup.phone || ""} onChange={e => setCurrentGroup({...currentGroup, phone:e.target.value})} />
+                        <input className="w-full p-4 bg-slate-50 rounded-xl shadow-inner border-none outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Group Name" value={currentGroup.groupName || ""} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} required />
+                        <input className="w-full p-4 bg-slate-50 rounded-xl shadow-inner border-none outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Therapist" value={currentGroup.therapist || ""} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} required />
+                        <input className="w-full p-4 border-2 border-indigo-100 rounded-xl font-bold text-indigo-700 outline-none" placeholder="Direct Email" value={currentGroup.email || ""} onChange={e => setCurrentGroup({...currentGroup, email:e.target.value})} />
+                        <input className="w-full p-4 bg-slate-50 rounded-xl shadow-inner border-none outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Direct Phone" value={currentGroup.phone || ""} onChange={e => setCurrentGroup({...currentGroup, phone:e.target.value})} />
                         <div className="grid grid-cols-2 gap-4">
-                            <select className="p-4 bg-slate-50 rounded-xl" value={currentGroup.status || "Pending"} onChange={e => setCurrentGroup({...currentGroup, status:e.target.value})}><option>Pending</option><option>Verified</option></select>
-                            <input className="p-4 bg-slate-50 rounded-xl" placeholder="County" value={currentGroup.county || ""} onChange={e => setCurrentGroup({...currentGroup, county:e.target.value})} />
+                            <select className="p-4 bg-slate-50 rounded-xl font-bold border-none outline-none focus:ring-2 focus:ring-indigo-500" value={currentGroup.status || "Pending"} onChange={e => setCurrentGroup({...currentGroup, status:e.target.value})}><option>Pending</option><option>Verified</option></select>
+                            <input className="p-4 bg-slate-50 rounded-xl shadow-inner border-none outline-none focus:ring-2 focus:ring-indigo-500" placeholder="County" value={currentGroup.county || ""} onChange={e => setCurrentGroup({...currentGroup, county:e.target.value})} />
                         </div>
                         <div className="flex gap-4 pt-4">
                             <button type="button" onClick={() => {setShowAddForm(false); setShowEditForm(false);}} className="flex-1 font-bold text-slate-400">Cancel</button>
-                            <button type="submit" className="flex-1 bg-indigo-600 text-white p-4 rounded-xl font-bold">Save Lead</button>
+                            <button type="submit" className="flex-1 bg-indigo-600 text-white p-4 rounded-xl font-bold shadow-lg">Save Lead</button>
                         </div>
                     </form>
                   </div>
