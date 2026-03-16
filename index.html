@@ -4,22 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Tampa Bay Therapist Dashboard</title>
+    <title>TBTA Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @keyframes glowBorder {
-            0% { border-color: #4f46e5; box-shadow: 0 0 5px rgba(79, 70, 229, 0.4); }
-            50% { border-color: #818cf8; box-shadow: 0 0 20px rgba(79, 70, 229, 0.8); }
-            100% { border-color: #4f46e5; box-shadow: 0 0 5px rgba(79, 70, 229, 0.4); }
+        @keyframes ultraGlow {
+            0% { border-color: #4f46e5; box-shadow: 0 0 5px #4f46e5; transform: scale(1); }
+            50% { border-color: #818cf8; box-shadow: 0 0 25px #6366f1; transform: scale(1.01); }
+            100% { border-color: #4f46e5; box-shadow: 0 0 5px #4f46e5; transform: scale(1); }
         }
-        .glowing-card { animation: glowBorder 2s infinite; border-width: 3px !important; background-color: #f5f7ff !important; }
+        .new-lead-glow { 
+            animation: ultraGlow 2s infinite ease-in-out; 
+            border-width: 4px !important; 
+            background-color: #f0f4ff !important;
+            position: relative;
+            z-index: 50;
+        }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans pb-20">
+<body class="bg-gray-100 text-gray-900 font-sans pb-20">
     <div id="root"></div>
 
     <script type="text/babel">
@@ -58,23 +64,24 @@
             try {
                 await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify({ action, data: group }) });
                 await loadData();
-            } catch (e) { alert("Sync error."); }
+            } catch (e) { alert("Sync Error"); }
             setIsSaving(false);
           };
 
-          const filteredAndSortedData = useMemo(() => {
+          // --- CRITICAL SORTING ENGINE ---
+          const processedData = useMemo(() => {
             const filtered = data.filter(g => 
               (g.groupName || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
               (g.therapist || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
               (g.keywords || "").toLowerCase().includes(searchTerm.toLowerCase())
             );
             
-            // PRIORITY SORT: viewed=false (new leads) always at the top
+            // This explicitly places 'false' viewed items at the very top
             return [...filtered].sort((a, b) => {
-                const aNew = String(a.viewed).toLowerCase() === 'false';
-                const bNew = String(b.viewed).toLowerCase() === 'false';
-                if (aNew && !bNew) return -1;
-                if (!aNew && bNew) return 1;
+                const aIsNew = String(a.viewed).toLowerCase() === 'false';
+                const bIsNew = String(b.viewed).toLowerCase() === 'false';
+                if (aIsNew && !bIsNew) return -1;
+                if (!aIsNew && bIsNew) return 1;
                 return 0;
             });
           }, [data, searchTerm]);
@@ -84,15 +91,11 @@
                 setExpandedGroupId(null);
             } else {
                 setExpandedGroupId(group.id);
+                // Mark viewed immediately when opened
                 if (String(group.viewed).toLowerCase() === 'false') {
                     updateGroupInCloud({ ...group, viewed: "true" });
                 }
             }
-          };
-
-          const handleMarkEmailed = (group) => {
-            updateGroupInCloud({ ...group, lastContacted: new Date().toLocaleDateString(), viewed: "true" });
-            setExpandedGroupId(null);
           };
 
           const handleLogin = (e) => {
@@ -101,19 +104,19 @@
             else { setPinError(true); setPinInput(""); }
           };
 
-          const getEmailMessage = (g) => `Hello ${g.therapist.split(',')[0]},\n\nMy name is Marvin from Tampa Bay Therapist & Associates. I'm inquiring about your group: ${g.groupName}. Are you accepting new referrals? Please confirm schedule/fees.\n\nThanks,\nMarvin`;
+          const getEmailDraft = (g) => `Hello ${g.therapist.split(',')[0]},\n\nMy name is Marvin from Tampa Bay Therapist & Associates. I'm inquiring about your group: ${g.groupName}. Are you currently accepting new referrals? Please confirm your updated schedule and fees.\n\nThank you,\nMarvin`;
 
           if (!isAuthenticated) {
             return (
-              <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4 font-sans">
-                <div className="bg-white p-10 rounded-2xl shadow-2xl max-w-sm w-full border-t-8 border-indigo-600">
+              <div className="min-h-screen flex items-center justify-center bg-gray-200 p-4">
+                <div className="bg-white p-10 rounded-3xl shadow-2xl max-w-sm w-full border-b-8 border-indigo-600">
                   <div className="text-center mb-8">
-                    <i className="fas fa-lock text-5xl text-indigo-600 mb-4"></i>
-                    <h2 className="text-3xl font-black text-gray-800 tracking-tight">TBTA SECURE</h2>
+                    <i className="fas fa-user-shield text-5xl text-indigo-600 mb-4"></i>
+                    <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tighter">TBTA Access</h2>
                   </div>
-                  <form onSubmit={handleLogin} className="space-y-6">
-                    <input type="password" maxLength="4" autoFocus value={pinInput} onChange={e => setPinInput(e.target.value)} className="w-full px-4 py-4 text-center text-3xl tracking-[0.5em] border-2 border-gray-100 rounded-xl focus:border-indigo-500 outline-none" placeholder="••••" />
-                    <button type="submit" className="w-full bg-indigo-600 text-white font-black py-4 rounded-xl hover:bg-indigo-700 transition shadow-lg">ENTER DASHBOARD</button>
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    <input type="password" maxLength="4" autoFocus value={pinInput} onChange={e => setPinInput(e.target.value)} className="w-full p-4 text-center text-3xl tracking-widest border-2 border-gray-100 rounded-2xl focus:border-indigo-500 outline-none transition-all" placeholder="••••" />
+                    <button type="submit" className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl hover:bg-indigo-700 shadow-lg transition-transform active:scale-95">UNLOСK DASHBOARD</button>
                   </form>
                 </div>
               </div>
@@ -121,36 +124,36 @@
           }
 
           return (
-            <div className="min-h-screen bg-gray-50">
-              {isSaving && <div className="fixed inset-0 bg-white/80 z-[60] flex flex-col items-center justify-center font-black text-indigo-600"><i className="fas fa-sync fa-spin text-4xl mb-2"></i>SYNCING CLOUD...</div>}
+            <div className="min-h-screen">
+              {isSaving && <div className="fixed inset-0 bg-white/90 z-[100] flex flex-col items-center justify-center font-black text-indigo-600"><i className="fas fa-spinner fa-spin text-5xl mb-4"></i>UPDATING CLOUD DATABASE...</div>}
 
-              <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-                <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
+              <header className="bg-white border-b-2 border-gray-100 sticky top-0 z-40 px-6 py-4 shadow-sm">
+                <div className="max-w-6xl mx-auto flex justify-between items-center">
                   <div>
-                    <h1 className="text-xl font-black text-indigo-900 uppercase tracking-tighter">Tampa Bay Therapist & Associates</h1>
-                    <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Referral Triage</span>
-                        <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold animate-pulse">● Sync: Live</span>
+                    <h1 className="text-xl font-black text-indigo-900 uppercase">Tampa Bay Therapist & Associates</h1>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-bold">REFERRAL TRIAGE</span>
+                        <span className="text-[10px] text-green-600 font-bold animate-pulse"><i className="fas fa-circle"></i> SYNC: LIVE</span>
                     </div>
                   </div>
-                  <button onClick={() => {setIsAuthenticated(false); sessionStorage.clear();}} className="text-gray-300 hover:text-red-500 transition"><i className="fas fa-power-off text-xl"></i></button>
+                  <button onClick={() => {setIsAuthenticated(false); sessionStorage.clear();}} className="h-10 w-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors"><i className="fas fa-power-off"></i></button>
                 </div>
               </header>
 
-              <main className="max-w-5xl mx-auto px-6 py-8">
-                <div className="flex flex-col sm:flex-row gap-4 mb-10">
+              <main className="max-w-4xl mx-auto px-4 py-8">
+                <div className="flex gap-4 mb-10">
                   <div className="relative flex-1">
                     <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-300"></i>
-                    <input type="text" className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-100 rounded-2xl shadow-sm focus:border-indigo-500 outline-none text-lg" placeholder="Search trauma, teens, Spanish..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                    <input type="text" className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border-2 border-white shadow-sm focus:border-indigo-500 outline-none text-lg transition-all" placeholder="Search trauma, teens, Spanish..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                   </div>
-                  <button onClick={() => { setCurrentGroup({groupName:"", therapist:"", email:"[Awaiting Response]", viewed:"false", status:"Pending"}); setShowAddForm(true); }} className="px-8 py-4 bg-indigo-800 text-white font-black rounded-2xl shadow-lg hover:bg-indigo-900 transition">+ NEW LEAD</button>
+                  <button onClick={() => { setCurrentGroup({groupName:"", therapist:"", email:"[Awaiting Response]", viewed:"false", status:"Pending"}); setShowAddForm(true); }} className="px-8 bg-indigo-800 text-white font-black rounded-2xl shadow-xl hover:bg-indigo-900 transition-all active:scale-95">+ NEW LEAD</button>
                 </div>
 
                 {isLoading ? (
-                  <div className="text-center py-20"><i className="fas fa-circle-notch fa-spin text-5xl text-indigo-200"></i></div>
+                  <div className="text-center py-20"><i className="fas fa-circle-notch fa-spin text-6xl text-indigo-100"></i></div>
                 ) : (
                   <div className="space-y-6">
-                    {filteredAndSortedData.map(group => {
+                    {processedData.map(group => {
                       const isNew = String(group.viewed).toLowerCase() === 'false';
                       const isExpanded = expandedGroupId === group.id;
                       const isContacted = !!group.lastContacted;
@@ -158,51 +161,53 @@
                       return (
                         <div key={group.id} 
                              onClick={() => handleToggleExpand(group)}
-                             className={`bg-white rounded-3xl border-2 transition-all cursor-pointer overflow-hidden ${isNew ? 'glowing-card' : 'border-gray-100 hover:border-indigo-200'} ${isContacted ? 'bg-green-50/20' : ''}`}
+                             className={`bg-white rounded-[2rem] border-2 transition-all cursor-pointer overflow-hidden ${isNew ? 'new-lead-glow' : 'border-white shadow-sm hover:border-indigo-200'}`}
                         >
-                          <div className="p-6 sm:p-8">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="pr-12">
+                          <div className="p-8">
+                            <div className="flex justify-between items-start">
+                                <div>
                                     <div className="flex items-center gap-3 mb-2">
-                                        {isNew && <span className="bg-indigo-600 text-white text-[10px] px-2 py-1 rounded-lg font-black uppercase tracking-tighter">New Scraped Lead</span>}
-                                        <h3 className="text-2xl font-black text-gray-900 tracking-tight">{group.groupName}</h3>
+                                        {isNew && <span className="bg-indigo-600 text-white text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest animate-bounce">ACTIОN REQUIRED</span>}
+                                        <h3 className="text-2xl font-black text-slate-900">{group.groupName}</h3>
                                     </div>
                                     <p className="text-indigo-600 font-bold text-lg">{group.therapist}</p>
                                 </div>
-                                <div className="flex gap-2">
-                                    <button onClick={(e) => {e.stopPropagation(); setCurrentGroup(group); setShowEditForm(true);}} className="p-2 text-gray-300 hover:text-indigo-600 transition"><i className="fas fa-edit text-xl"></i></button>
-                                    <button onClick={(e) => {e.stopPropagation(); if(confirm("Delete lead?")) updateGroupInCloud(group, "delete");}} className="p-2 text-gray-300 hover:text-red-500 transition"><i className="fas fa-trash-alt text-xl"></i></button>
+                                <div className="flex gap-4">
+                                    <button onClick={(e) => {e.stopPropagation(); setCurrentGroup(group); setShowEditForm(true);}} className="text-gray-300 hover:text-indigo-600"><i className="fas fa-edit text-xl"></i></button>
+                                    <button onClick={(e) => {e.stopPropagation(); if(confirm("Delete lead permanently?")) updateGroupInCloud(group, "delete");}} className="text-gray-300 hover:text-red-500"><i className="fas fa-trash-alt text-xl"></i></button>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-sm">
-                                <div className="bg-gray-50 p-3 rounded-xl"><p className="text-gray-400 font-bold uppercase text-[10px] mb-1">Contact Email</p><p className={`font-bold ${group.email === '[Awaiting Response]' ? 'text-amber-600' : 'text-gray-700'}`}>{group.email}</p></div>
-                                <div className="bg-gray-50 p-3 rounded-xl"><p className="text-gray-400 font-bold uppercase text-[10px] mb-1">Phone</p><p className="font-bold text-gray-700">{group.phone || "---"}</p></div>
-                                <div className="bg-gray-50 p-3 rounded-xl"><p className="text-gray-400 font-bold uppercase text-[10px] mb-1">Status</p><p className="font-bold text-gray-700 uppercase tracking-widest">{group.status}</p></div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+                                <div className="p-3 bg-gray-50 rounded-xl"><p className="text-[10px] font-black text-gray-400 uppercase">Email</p><p className={`truncate font-bold ${group.email?.includes('Awaiting') ? 'text-amber-600' : 'text-slate-700'}`}>{group.email}</p></div>
+                                <div className="p-3 bg-gray-50 rounded-xl"><p className="text-[10px] font-black text-gray-400 uppercase">Phone</p><p className="font-bold text-slate-700">{group.phone || "---"}</p></div>
+                                <div className="p-3 bg-gray-50 rounded-xl"><p className="text-[10px] font-black text-gray-400 uppercase">Status</p><p className="font-bold text-indigo-700 uppercase tracking-tighter">{group.status}</p></div>
                             </div>
 
                             {isExpanded && (
-                                <div className="mt-8 pt-8 border-t border-gray-100 animate-in fade-in slide-in-from-top-4 duration-300">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mb-8">
-                                        <div className="space-y-4">
-                                            <h4 className="font-black text-gray-900 uppercase text-xs tracking-widest border-b pb-2">Clinical Details</h4>
-                                            <p className="text-sm"><strong>County:</strong> {group.county}</p>
-                                            <p className="text-sm"><strong>Modality:</strong> {group.modality}</p>
-                                            <p className="text-sm"><strong>Cost:</strong> {group.cost}</p>
-                                            <p className="text-sm"><strong>Schedule:</strong> {group.schedule}</p>
-                                            <p className="text-sm text-indigo-500"><strong>Keywords:</strong> {group.keywords}</p>
+                                <div className="mt-8 pt-8 border-t-2 border-gray-50 space-y-8 animate-in fade-in zoom-in-95 duration-300">
+                                    <div className="grid sm:grid-cols-2 gap-10">
+                                        <div>
+                                            <h4 className="font-black text-xs uppercase text-gray-400 mb-4 tracking-widest">Full Directory Info</h4>
+                                            <div className="space-y-3 text-sm">
+                                                <p><strong>County:</strong> {group.county}</p>
+                                                <p><strong>Modality:</strong> {group.modality}</p>
+                                                <p><strong>Cost:</strong> {group.cost}</p>
+                                                <p><strong>Schedule:</strong> {group.schedule}</p>
+                                                <p className="bg-indigo-50 p-2 rounded-lg text-indigo-700"><strong>Keywords:</strong> {group.keywords}</p>
+                                            </div>
                                         </div>
-                                        <div className="space-y-4">
-                                            <h4 className="font-black text-gray-900 uppercase text-xs tracking-widest border-b pb-2">Email Verification Draft</h4>
-                                            <textarea readOnly className="w-full p-4 bg-gray-900 text-gray-300 text-xs rounded-xl h-32 font-mono" value={getEmailMessage(group)} />
-                                            <div className="flex gap-2">
-                                                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(group.email); setCopiedId(group.id+'e'); }} className="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg text-xs font-bold">{copiedId === group.id+'e' ? 'Copied Email!' : 'Copy Email'}</button>
-                                                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(getEmailMessage(group)); setCopiedId(group.id+'m'); }} className="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg text-xs font-bold">{copiedId === group.id+'m' ? 'Copied Draft!' : 'Copy Draft'}</button>
+                                        <div>
+                                            <h4 className="font-black text-xs uppercase text-gray-400 mb-4 tracking-widest">Verification Draft</h4>
+                                            <textarea readOnly className="w-full p-4 bg-slate-900 text-slate-300 text-xs rounded-2xl h-32 font-mono leading-relaxed" value={getEmailDraft(group)} />
+                                            <div className="flex gap-3 mt-3">
+                                                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(group.email); setCopiedId(group.id+'e'); setTimeout(()=>setCopiedId(null), 2000); }} className="flex-1 py-3 bg-gray-200 rounded-xl text-xs font-black uppercase tracking-tight">{copiedId === group.id+'e' ? 'Email Copied!' : 'Copy Email'}</button>
+                                                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(getEmailDraft(group)); setCopiedId(group.id+'m'); setTimeout(()=>setCopiedId(null), 2000); }} className="flex-1 py-3 bg-gray-200 rounded-xl text-xs font-black uppercase tracking-tight">{copiedId === group.id+'m' ? 'Message Copied!' : 'Copy Message'}</button>
                                             </div>
                                         </div>
                                     </div>
-                                    <button onClick={(e) => { e.stopPropagation(); handleMarkEmailed(group); }} className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black shadow-lg hover:bg-emerald-700 transition">
-                                        {isContacted ? `RE-MARK EMAILED (Last: ${group.lastContacted})` : 'MARK INITIAL OUTREACH SENT'}
+                                    <button onClick={(e) => { e.stopPropagation(); updateGroupInCloud({ ...group, lastContacted: new Date().toLocaleDateString(), viewed: "true" }); setExpandedGroupId(null); }} className="w-full py-5 bg-emerald-600 text-white rounded-3xl font-black text-lg shadow-xl hover:bg-emerald-700 active:scale-95 transition-all">
+                                        {isContacted ? `UPDATE OUTREACH (Last: ${group.lastContacted})` : 'CONFIRM INITIAL OUTREACH SENT'}
                                     </button>
                                 </div>
                             )}
@@ -216,24 +221,21 @@
 
               {/* MODAL FORM */}
               {(showAddForm || showEditForm) && (
-                <div className="fixed inset-0 bg-indigo-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-md">
-                  <div className="bg-white p-8 rounded-[2rem] w-full max-w-xl shadow-2xl max-h-[90vh] overflow-y-auto">
-                    <h2 className="text-2xl font-black mb-6 text-indigo-900">{showEditForm ? 'Edit Group Data' : 'Manual Lead Entry'}</h2>
-                    <form onSubmit={e => {e.preventDefault(); handleSaveSubmit(e, showEditForm ? 'edit' : 'add');}} className="space-y-4">
-                        <div className="grid grid-cols-1 gap-4">
-                            <input className="p-4 border-2 border-gray-100 rounded-2xl outline-none focus:border-indigo-500" placeholder="Group Name" value={currentGroup.groupName || ""} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} required />
-                            <input className="p-4 border-2 border-gray-100 rounded-2xl outline-none focus:border-indigo-500" placeholder="Therapist" value={currentGroup.therapist || ""} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} required />
-                            <input className="p-4 border-2 border-indigo-100 rounded-2xl outline-none focus:border-indigo-500 font-bold" placeholder="Email (Direct)" value={currentGroup.email || ""} onChange={e => setCurrentGroup({...currentGroup, email:e.target.value})} />
-                            <input className="p-4 border-2 border-gray-100 rounded-2xl outline-none focus:border-indigo-500" placeholder="Phone Number" value={currentGroup.phone || ""} onChange={e => setCurrentGroup({...currentGroup, phone:e.target.value})} />
+                <div className="fixed inset-0 bg-indigo-950/80 z-[80] flex items-center justify-center p-4 backdrop-blur-md">
+                  <div className="bg-white p-10 rounded-[3rem] w-full max-w-xl shadow-2xl overflow-y-auto max-h-[90vh]">
+                    <h2 className="text-3xl font-black mb-8 text-indigo-900 tracking-tighter">{showEditForm ? 'UPDATE DATA' : 'MANUAL ENTRY'}</h2>
+                    <form onSubmit={e => {e.preventDefault(); updateGroupInCloud(currentGroup, showEditForm ? 'edit' : 'add'); setShowAddForm(false); setShowEditForm(false);}} className="space-y-4">
+                        <input className="w-full p-4 border-2 border-gray-100 rounded-2xl font-bold focus:border-indigo-500 outline-none" placeholder="Group Name" value={currentGroup.groupName || ""} onChange={e => setCurrentGroup({...currentGroup, groupName:e.target.value})} required />
+                        <input className="w-full p-4 border-2 border-gray-100 rounded-2xl font-bold focus:border-indigo-500 outline-none" placeholder="Therapist" value={currentGroup.therapist || ""} onChange={e => setCurrentGroup({...currentGroup, therapist:e.target.value})} required />
+                        <input className="w-full p-4 border-2 border-indigo-100 rounded-2xl font-black text-indigo-600 focus:border-indigo-500 outline-none" placeholder="Direct Email" value={currentGroup.email || ""} onChange={e => setCurrentGroup({...currentGroup, email:e.target.value})} />
+                        <div className="grid grid-cols-2 gap-4">
+                            <select className="p-4 border-2 border-gray-100 rounded-2xl bg-white font-bold" value={currentGroup.status || "Pending"} onChange={e => setCurrentGroup({...currentGroup, status:e.target.value})}><option>Pending</option><option>Verified</option></select>
+                            <input className="p-4 border-2 border-gray-100 rounded-2xl font-bold" placeholder="County" value={currentGroup.county || ""} onChange={e => setCurrentGroup({...currentGroup, county:e.target.value})} />
                         </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm font-bold">
-                            <select className="p-4 border-2 border-gray-100 rounded-2xl bg-white" value={currentGroup.status || "Pending"} onChange={e => setCurrentGroup({...currentGroup, status:e.target.value})}><option>Pending</option><option>Verified</option></select>
-                            <input className="p-4 border-2 border-gray-100 rounded-2xl" placeholder="County" value={currentGroup.county || ""} onChange={e => setCurrentGroup({...currentGroup, county:e.target.value})} />
-                        </div>
-                        <textarea className="w-full p-4 border-2 border-gray-100 rounded-2xl text-sm" placeholder="Keywords (trauma, OCD, teen...)" value={currentGroup.keywords || ""} onChange={e => setCurrentGroup({...currentGroup, keywords:e.target.value})} rows="2" />
-                        <div className="flex gap-4 pt-4">
-                            <button type="button" onClick={() => {setShowAddForm(false); setShowEditForm(false);}} className="flex-1 font-bold text-gray-400">Cancel</button>
-                            <button type="submit" className="flex-1 bg-indigo-600 text-white p-4 rounded-2xl font-black shadow-lg">SAVE TO CLOUD</button>
+                        <textarea className="w-full p-4 border-2 border-gray-100 rounded-2xl font-medium text-sm" placeholder="Keywords (trauma, teens, Spanish...)" value={currentGroup.keywords || ""} onChange={e => setCurrentGroup({...currentGroup, keywords:e.target.value})} rows="3" />
+                        <div className="flex gap-4 pt-8">
+                            <button type="button" onClick={() => {setShowAddForm(false); setShowEditForm(false);}} className="flex-1 font-black text-gray-400">CANCEL</button>
+                            <button type="submit" className="flex-1 bg-indigo-600 text-white p-5 rounded-3xl font-black shadow-2xl">SAVE TO CLOUD</button>
                         </div>
                     </form>
                   </div>
@@ -241,12 +243,6 @@
               )}
             </div>
           );
-        }
-        
-        // Helper to trigger save to cloud
-        async function handleSaveSubmit(e, actionType) {
-            // This placeholder connects to the React component's scope logic
-            window.location.reload(); 
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
